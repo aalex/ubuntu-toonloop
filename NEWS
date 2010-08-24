@@ -1,0 +1,102 @@
+See the RELEASE file for the latest new features and bug fixes.
+See the ChangeLog file for a log of previous releases informations.
+
+Release notes for Toonloop 1.9.1
+--------------------------------
+
+This release is an unstable version in the 1.9 series. This version contains new features preparing the 2.0 stable series. Since the 1.2 series, we have done a complete rewrite of the application in C++. In this very specific 1.9.1 release, we drop gst-plugins-gl in favour of Clutter-GST. We removed the support for the --keep-in-ram option, which is used to keep the image data in RAM instead of writing the images to the disk.
+
+New features:
+    * Using Clutter!
+
+Bug fixes: 
+    * Fixed a segfault when using the "test" or "x" video device.
+
+
+Release notes for Toonloop 1.9.0
+--------------------------------
+
+This release is an unstable version in the 1.9 series. This version contains new features preparing the 2.0 stable series. Since the 1.2 series, we have done a complete rewrite of the application in C++. In this very specific 1.9.0 release, we use gst-plugins-gl.
+
+New features:
+    * DONE: Choose whether to use SDL, GTK, GTKglext, wxWidgets, or the generic
+        one in the gst-plugins-gl/tests/examples. (We chose GTK + Clutter-GST)
+    * DONE: Get the pipeline that takes snapshots with gtkpixbufsink done. 
+    * DONE: prototype: Load images in a gdkpixbuf to create an OpenGL texture 
+        and display it.
+    * DONE: creates directories (using boost::filesystem)
+    * DONE: Use boost::program_options in a similar way to Toonloop 1.x.
+    * DONE: Be able to choose the camera input, or the test source. We had to 
+        detect the supported FPS by the camera.
+    * DONE: Encapsulate the pipeline and the OpenGL rendering in a class.
+    * DONE: Resize render area when window is resized.
+    * DONE: Use GLEW to check for the OpenGL extensions needed to use shaders.
+    * DONE: Save the images in the right directory, with unique names.
+    * DONE: Save image files at snapshot time and play from disk. 
+
+Bug fixes: 
+    * 51:   Package Boost file_system with autotools 
+    * 5:    Resizing the window should resize render area 
+    * Memory leak when loading images.
+
+
+Things done for Toonloop 1.2 (Python)
+-------------------------------------
+
+In this version, we aimed to improve the kiosk/perf mode.
+
+ * DONE: fixed crash when camera changes its number before startup.
+ * DONE: More effects : cinelike, convolution
+ * DONE: Display name of the current effect + HUD. (toggled on/off) With GLUT.
+ * DONE: Create the Toonplayer looping video player. (external app) See [[http://bitbucket.org/aalex/toonplayer|the toonplayer project page]].
+ * DONE: remove some of the unused features. (RSS server, etc.)
+ * DONE: Use the control key for shortcuts when it is more user friendly. See [[InterfaceDesign|the InterfaceDesign page]]
+ * DONE: GTK error dialog in case of a critical error at startup.
+ * DONE: Text: improve how the HUD text look
+ * DONE beautify themes: 
+     * DONE: drop the picture in picture themes
+     * DONE: make one fullscreen playback theme
+
+
+Things done for Toonloop 1.1 (Python)
+-------------------------------------
+
+In this version, we aimed for feature completeness. 
+
+ * DONE: Able to add or delete frames anywhere in a clip.
+ * DONE: Playback direction : forward, backward.
+ * DONE: delete and add frames anywhere in a clip
+ * DONE: Playback in YOYO mode. (back&forth)
+ * DONE: Display a progress bar when saving a clip.
+ * DONE: Shift-Q to quit, and not ESC anymore.
+ * DONE: Added groups of options. One for each effect.
+ * DONE: Unified interface to effects. 
+ * DONE: Added simplechroma, lumakey, leavecolor and brcosa effects.
+ * DONE: Background image is one taken using a special key stroke. 
+
+
+Things done for Toonloop 1.0 beta (Python)
+-------------------------------------------
+
+ * DONE: Keying (OpenGL GLSL shader)
+ * DONE: midi input (keyboard + foot switch) using pd
+ * DONE: project name
+ * DONE: background image for chroma keying shader
+ * DONE: web and fudi disabled by default
+ * DONE: Separate file types.
+ * DONE: port numbers should be > 1024 (root)
+
+
+Things done for Toonloop 1.0 alpha (Python)
+-------------------------------------------
+
+ * DONE: Using Python ! See http://tristanswork.blogspot.com/2008/12/live-animation-with-pygame-and.html
+ * DONE: We use Python, twisted, pygame and OpenGL 
+ * DONE: onion peal + Full screen in OpenGL
+ * DONE: config CLI
+ * DONE: save a clip  in threads, unique JPEG, as name.  (using config or osc) Increment sequence name. Sequences are now a series of clips.
+ * DONE: different frame rate for capture=30 and playback=12 (refresh cam before adding frame)
+ * DONE: intervalometer
+ * DONE: convert to JPEG images and Motion-JPEG movie
+ * DONE: RSS feed server, documentation on the web
+
