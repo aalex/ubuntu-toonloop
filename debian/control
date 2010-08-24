@@ -1,0 +1,66 @@
+Source: toonloop
+Section: video
+Priority: optional
+Maintainer: Alexandre Quessy <alexandre@quessy.net>
+Build-Depends:
+ automake,
+ bison,
+ cdbs,
+ debhelper (>= 6),
+ ffmpeg,
+ flex,
+ gettext,
+ gstreamer0.10-alsa,
+ gstreamer0.10-ffmpeg,
+ gstreamer0.10-plugins-bad,
+ gstreamer0.10-plugins-base,
+ gstreamer0.10-plugins-good,
+ gstreamer0.10-plugins-ugly (>= 0.10.14),
+ gstreamer0.10-pulseaudio,
+ gstreamer0.10-x,
+ help2man,
+ libasound-dev,
+ libasound2-dev,
+ libboost-date-time-dev,
+ libboost-filesystem-dev,
+ libboost-program-options-dev,
+ libboost-signals-dev,
+ libboost-system-dev,
+ libboost-thread-dev,
+ libclutter-1.0-dev,
+ libclutter-gst-0.10-dev,
+ libclutter-gtk-0.10-dev,
+ libglew1.5-dev,
+ libglib2.0-dev,
+ libglu1-mesa-dev,
+ libgstreamer-plugins-base0.10-dev,
+ libgstreamer0.10-dev (>= 0.10.23),
+ libgtk2.0-dev,
+ libjack-dev,
+ liblo-dev,
+ libstk0-dev,
+ libtool,
+ libxml2-dev,
+ libxv-dev,
+ mencoder
+Standards-Version: 3.8.4
+Homepage: http://www.toonloop.com
+
+Package: toonloop
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+ gstreamer0.10-alsa,
+ gstreamer0.10-ffmpeg,
+ gstreamer0.10-plugins-bad,
+ gstreamer0.10-plugins-base,
+ gstreamer0.10-plugins-good,
+ gstreamer0.10-plugins-ugly (>= 0.10.14),
+ gstreamer0.10-pulseaudio,
+ gstreamer0.10-x
+Recommends:
+ bash-completion,
+ gstreamer0.10-tools
+Description: live stop-motion editor
+ Toonloop is a live stop-motion animation editor and player.
