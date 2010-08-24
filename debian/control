@@ -58,9 +58,13 @@ Depends:
  gstreamer0.10-plugins-good,
  gstreamer0.10-plugins-ugly (>= 0.10.14),
  gstreamer0.10-pulseaudio,
- gstreamer0.10-x
+ gstreamer0.10-x,
+ mencoder
 Recommends:
- bash-completion,
  gstreamer0.10-tools
 Description: live stop-motion editor
- Toonloop is a live stop-motion animation editor and player.
+ Toonloop is a live stop-motion animation editor and player. It aims to
+ show the creation process the the audience as well as the result of
+ the creation. The frame by frame animation is made by adding frames
+ one by one to a clip made of many frames. Clips are displayed in a
+ never ending loop.
