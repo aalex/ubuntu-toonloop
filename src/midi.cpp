@@ -22,6 +22,9 @@
 #include <cstdlib>
 #include <stk/RtMidi.h>
 #include <boost/signals2.hpp>
+#include "application.h"
+#include "configuration.h"
+#include "controller.h"
 #include "midi.h"
 /**
  * Callback for incoming MIDI messages. 
@@ -50,13 +53,14 @@ void MidiInput::input_message_cb(double delta_time, std::vector< unsigned char >
             {
                 if (context->verbose_)
                     std::cout << "Sustain pedal is down."  << std::endl;
+                context->on_pedal_down();
                 context->pedal_down_signal_();
             }
             // we might want pedal up signal too (0)
     }
 }
 
-const void MidiInput::enumerate_devices()
+void MidiInput::enumerate_devices() const
 {
     // List inputs.
     std::cout << std::endl << "MIDI input devices: " << ports_count_ << " found." << std::endl;
@@ -73,18 +77,28 @@ const void MidiInput::enumerate_devices()
     }
 }
 
-const bool MidiInput::is_open()
+bool MidiInput::is_open() const
 {
     return opened_;
 }
 
-MidiInput::MidiInput()
+/** Called when a sustain MIDI pedal goes down.
+ */
+void MidiInput::on_pedal_down()
+{
+    if (owner_->get_configuration()->get_verbose())
+        std::cout << "on_pedal_down" << std::endl;
+    owner_->get_controller()->add_frame();
+}
+
+MidiInput::MidiInput(Application* owner) : 
+        owner_(owner)
 {
     verbose_ = false;
     midi_in_ = 0;
     // RtMidiIn constructor
     try {
-        midi_in_ = new RtMidiIn(); // FIXME: should be use a pointer?
+        midi_in_ = new RtMidiIn; // FIXME: should be use a pointer?
     }
     catch (RtError &error) {
         error.printMessage();

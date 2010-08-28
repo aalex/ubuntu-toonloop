@@ -65,7 +65,6 @@ Here is the list of Debian package that you will need to build Toonloop 2.x.
 The packages listed below are not used yet, but we plan to use them 
 soon.
 
- doxygen,
  libxml++2.6-2,
  libxml++2.6-dev,
 
@@ -111,8 +110,18 @@ Page down          : next clip
 Page up            : previous clip
 Number from 0 to 9 : switch to a specific clip
 Ctrl-s             : saves the current clip as a movie file
+Tab                : changes the playback direction
+r                  : clear the current clip
 
 Toonloop saves the clip in its project directory. The default project directory is the ~/Documents/toonloop/default/ directory, where "~" is your HOME directory. 
+
+
+DEVELOPERS DOCUMENTATION
+------------------------
+
+To build the HTML documentation, make sure you have doxygen installed, then:
+
+ make html
 
 
 Additional Configuration Notes

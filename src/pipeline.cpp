@@ -28,6 +28,7 @@
 #include <stdlib.h> // for itoa()
 
 #include "application.h"
+#include "clip.h"
 #include "configuration.h"
 #include "gui.h"
 #include "log.h" // TODO: make it async and implement THROW_ERROR
@@ -40,7 +41,7 @@ namespace fs = boost::filesystem;
 /**
  * GST bus signal watch callback 
  */
-void Pipeline::end_stream_cb(GstBus* bus, GstMessage* message, GstElement* pipeline)
+void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, GstElement* /*pipeline*/)
 {
     bool stop_it = true;
     if (GST_MESSAGE_TYPE(message) == GST_MESSAGE_ERROR)
@@ -76,7 +77,7 @@ void Pipeline::end_stream_cb(GstBus* bus, GstMessage* message, GstElement* pipel
         //gst_element_set_state(pipeline, GST_STATE_NULL);
         //gst_object_unref(pipeline);
         //FIXME: causes a segfault
-        //Application::get_instance().quit();
+        // context->owner_->quit();
     }
 }
 
@@ -86,13 +87,13 @@ void Pipeline::end_stream_cb(GstBus* bus, GstMessage* message, GstElement* pipel
  */
 void Pipeline::remove_frame()
 {
-    Clip *thisclip = Application::get_instance().get_current_clip();
+    Clip *thisclip = owner_->get_current_clip();
 
-    thisclip->lock_mutex();
+    //thisclip->lock_mutex();
     //int num_deleted;
     //num_deleted = 
     thisclip->frame_remove();
-    thisclip->unlock_mutex();
+    //thisclip->unlock_mutex();
     //if (num_deleted > 0)
     //    std::cout << "Deleted " << num_deleted << " frames in clip " << thisclip->get_id() << std::endl; 
 }
@@ -103,8 +104,8 @@ void Pipeline::remove_frame()
 void Pipeline::grab_frame()
 {
     GdkPixbuf* pixbuf;
-    Clip *thisclip = Application::get_instance().get_current_clip();
-    bool is_verbose = Application::get_instance().get_configuration().get_verbose();
+    Clip *thisclip = owner_->get_current_clip();
+    bool is_verbose = owner_->get_configuration()->get_verbose();
     //thisclip->lock_mutex();
     int current_clip_id = thisclip->get_id();
     g_object_get(G_OBJECT(gdkpixbufsink_), "last-pixbuf", &pixbuf, NULL);
@@ -119,6 +120,8 @@ void Pipeline::grab_frame()
     int h = gdk_pixbuf_get_height(pixbuf);
 
     /* if this is the first frame grabbed, set frame properties in clip */
+    // TODO:2010-08-27:aalex:Use image size, not clip size. 
+    // A clip may contain images that are not the same size.
     if (! thisclip->get_has_recorded_frame()) 
     {
         // TODO: each image should be a different size, if that's what it is.
@@ -127,11 +130,18 @@ void Pipeline::grab_frame()
         thisclip->set_has_recorded_frame();
     }
 
-    int image_number = thisclip->frame_add();
-    Image *thisimage = &thisclip->get_image(image_number);
+    int new_image_number = thisclip->frame_add();
+    Image *new_image = thisclip->get_image(new_image_number);
+    if (new_image == 0)
+    {
+        // This is very unlikely to happen
+        std::cerr << "No image at " << new_image_number << std::endl;
+        gdk_pixbuf_unref(pixbuf);
+        return;
+    }
     if (is_verbose)
-        std::cout << "Current clip: " << current_clip_id << ". Image number: " << image_number << std::endl;
-    std::string file_name = thisclip->get_image_full_path(thisimage);
+        std::cout << "Grab a frame. Current clip: " << current_clip_id << ". Image number: " << new_image_number << std::endl;
+    std::string file_name = thisclip->get_image_full_path(new_image);
     // We need 3 textures: 
     //  * the onionskin of the last frame grabbed. (or at the writehead position)
     //  * the frame at the playhead position
@@ -154,33 +164,34 @@ void Pipeline::grab_frame()
  */
 void Pipeline::stop()
 {
-    std::cout << "Stopping the Gstreamer pipeline." << std::endl;
+    std::cout << "Stopping the GStreamer pipeline." << std::endl;
     // FIXME: a segfault occurs here!
     gst_element_set_state(GST_ELEMENT(pipeline_), GST_STATE_NULL);
-    //std::cout << "Deleting the Gstreamer pipeline." << std::endl;
+    //std::cout << "Deleting the GStreamer pipeline." << std::endl;
     //gst_object_unref(pipeline_);
     // gtk main quit?
 }
 
 /**
- * Constructor which create the Gstreamer pipeline.
+ * Constructor which create the GStreamer pipeline.
  * This pipeline grabs the video and render the OpenGL.
  */
-Pipeline::Pipeline()
+Pipeline::Pipeline(Application* owner) :
+        owner_(owner)
 {
-    Configuration config = Application::get_instance().get_configuration();
+    Configuration *config = owner_->get_configuration();
     //onionskin_texture_ = Texture();
     //playback_texture_ = Texture();
     pipeline_ = NULL;
     pipeline_ = GST_PIPELINE(gst_pipeline_new("pipeline"));
     
     // Video source element
-    if (config.videoSource() == std::string("test")) 
+    if (config->videoSource() == "test")
     {
         std::cout << "Video source: videotestsrc" << std::endl;
         videosrc_  = gst_element_factory_make("videotestsrc", "videosrc0");
     } 
-    else if (config.videoSource() == std::string("x")) 
+    else if (config->videoSource() == "x") 
     {
         std::cout << "Video source: ximagesrc" << std::endl;
         videosrc_  = gst_element_factory_make("ximagesrc", "videosrc0");
@@ -221,7 +232,7 @@ Pipeline::Pipeline()
     GstElement* queue0 = gst_element_factory_make("queue", "queue0");
     g_assert(queue0);
 
-    videosink_ = clutter_gst_video_sink_new(CLUTTER_TEXTURE(Application::get_instance().get_gui().get_live_input_texture()));
+    videosink_ = clutter_gst_video_sink_new(CLUTTER_TEXTURE(owner_->get_gui()->get_live_input_texture()));
     // TODO: Make sure the rendering FPS is constant, and not subordinate to
     // the FPS of the camera.
 
@@ -247,9 +258,9 @@ Pipeline::Pipeline()
     gboolean is_linked = NULL;
     bool source_is_linked = false;
     int frame_rate_index = 0;
-    if (config.videoSource() == std::string("test") || config.videoSource() == std::string("x")) 
+    if (config->videoSource() == std::string("test") || config->videoSource() == std::string("x")) 
     {
-        if (config.videoSource() == std::string("x")) 
+        if (config->videoSource() == std::string("x")) 
         {
             g_object_set(G_OBJECT(videosrc_), "endx", 640, NULL);
             g_object_set(G_OBJECT(videosrc_), "endy", 480, NULL);
@@ -344,9 +355,9 @@ Pipeline::Pipeline()
     gst_object_unref(bus);
 
     // TODO:2010-08-06:aalex:We could rely on gstremer-properties to configure the video source.
-    if (config.videoSource() != std::string("test") && config.videoSource() != std::string("x"))
+    if (config->videoSource() != std::string("test") && config->videoSource() != std::string("x"))
     {
-        std::string device_name = config.videoSource(); // "/dev/video0";
+        std::string device_name = config->videoSource(); // "/dev/video0";
         g_print("Using camera %s.\n", device_name.c_str());
         g_object_set(videosrc_, "device", device_name.c_str(), NULL); 
     }
@@ -371,7 +382,7 @@ Pipeline::Pipeline()
         }
         g_print("-----------------------------------\n");
         exit(1);
-        //FIXME: causes a segfault: Application::get_instance().quit();
+        //FIXME: causes a segfault: context->owner_->quit();
     }
 
 }

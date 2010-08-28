@@ -18,22 +18,43 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef __OSC_INTERFACE_H__
 #define __OSC_INTERFACE_H__
 
 #include <string>
-#include <boost/thread.hpp>
-
-//#include "./oscSender.h"
 #include "./oscreceiver.h"
+#include "./oscsender.h"
 
-class OscInterface {
-    private:
+class Application;
+/** Open Sound Control sending and receiving for Toonloop.
+ */
+class OscInterface 
+{
+    public:
+        OscInterface(
+                Application* owner, 
+                const std::string &listen_port,
+                const std::string &send_port,
+                const std::string &send_addr); 
+        ~OscInterface();
+        void start();
+        void on_add_frame(unsigned int clip_number, unsigned int frame_number);
+        void on_remove_frame(unsigned int clip_number, unsigned int frame_number);
+        void on_next_image_to_play(unsigned int clip_number, unsigned int image_number, std::string file_name);
+
+        void on_choose_clip(unsigned int clip_number);
+        void on_clip_fps_changed(unsigned int clip_number, unsigned int fps);
+        void on_clip_saved(unsigned int clip_number, std::string file_name);
+        void on_no_image_to_play();
+        void on_clip_direction_changed(unsigned clip_number, std::string direction);
+        void on_clip_cleared(unsigned int clip_number);
         OscReceiver receiver_;
-        //OscSender sender_;
-        //boost::mutex tryToSubscribeMutex_;
-        //bool tryToSubscribe_;   // FIXME: should this be protected by a mutex?
-        //void subscribe();
+        OscSender sender_;
+    private:
+        bool sending_enabled_;
+        bool receiving_enabled_;
+        Application* owner_;
         static int pingCb(const char *path, 
                 const char *types, lo_arg **argv, 
                 int argc, void *data, void *user_data);
@@ -49,13 +70,7 @@ class OscInterface {
         static int removeFrameCb(const char *path, 
                 const char *types, lo_arg **argv, 
                 int argc, void *data, void *user_data);
-    public:
-            OscInterface(const std::string &listen_port); //,
-                    //const std::string &send_host, 
-                    //const std::string &send_port);
-            ~OscInterface();
-            void start();
-            void publish_added_frame() const;
+        void connect_signals_to_sending_slots();
 };
 
 #endif // __OSC_INTERFACE_H__

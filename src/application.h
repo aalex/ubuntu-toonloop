@@ -22,62 +22,60 @@
 #define __APPLICATION_H__
 
 #include <boost/program_options.hpp>
-#include <tr1/memory>
+#include <boost/scoped_ptr.hpp>
+#include <tr1/unordered_map>
 
-#include "clip.h"
-#include "configuration.h"
-#include "gui.h"
-#include "midi.h"
-#include "oscinterface.h"
-#include "pipeline.h"
-#include "moviesaver.h"
+class Clip;
+class Configuration;
+class Controller;
+class Gui;
+class MidiInput;
+class MovieSaver;
+class OscInterface;
+class Pipeline;
 
 // FIXME:2010-08-17:aalex:We should allow more than 10 clips
-#define MAX_CLIPS 10
+static const unsigned int MAX_CLIPS = 10;
 
-namespace po = boost::program_options;
-
-bool make_sure_directory_exists(std::string directory);;
-
+/** The Application class: starts Toonloop.
+ */
 class Application 
 {
     public:
-        void run(int argc, char *argv[]);
-        void quit();
-        static void reset();
-        // TODO: return a pointer
-        Gui &get_gui();
-        // TODO: return a pointer
-        Pipeline &get_pipeline();
-        // TODO: return a pointer
-        MidiInput &get_midi_input();
-        // TODO: return a pointer
-        Configuration &get_configuration();
-        // TODO: return a pointer
-        MovieSaver &get_movie_saver();
-        static Application& get_instance();
-        Clip* get_current_clip();
-        bool save_current_clip();
-        int get_current_clip_number();
-        void set_current_clip_number(int clipnumber);
-        //double get_cfps();
-        void on_pedal_down();
-
-    private:
         Application();
         ~Application();
-        static Application* instance_; // singleton
+        void run(int argc, char *argv[]);
+        void quit();
+        Gui *get_gui();
+        /** Returns the video Pipeline */
+        Pipeline *get_pipeline();
+        /** Returns the MIDI input manager */
+        MidiInput *get_midi_input();
+        /** Returns the Controller for actions and events */
+        Controller *get_controller();
+        /** Returns the Configuration for the application */
+        Configuration *get_configuration();
+        /** Returns the movie saving - using mencoder */
+        MovieSaver *get_movie_saver();
+        /** Returns the currently selected clip */
+        Clip* get_current_clip();
+        /** Returns the currently selected clip number */
+        unsigned int get_current_clip_number();
+        /** Should be only called directly by Controller::choose_clip */
+        void set_current_clip_number(unsigned int clipnumber);
+
+    private:
         void update_project_home_for_each_clip();
-        bool setup_project_home(std::string project_home);
-        // TODO: change for scoped_ptr
-        std::tr1::shared_ptr<Gui> gui_;
-        std::tr1::shared_ptr<MidiInput> midi_input_;
-        std::tr1::shared_ptr<OscInterface> osc_;
-        std::tr1::shared_ptr<Pipeline> pipeline_;
-        std::tr1::shared_ptr<Configuration> config_;
-        std::tr1::shared_ptr<MovieSaver> movie_saver_;
-        int selected_clip_;
-        double cfps_;
+        bool setup_project_home(const std::string& project_home);
+        boost::scoped_ptr<Controller> controller_;
+        boost::scoped_ptr<Gui> gui_;
+        boost::scoped_ptr<MidiInput> midi_input_;
+        boost::scoped_ptr<OscInterface> osc_;
+        boost::scoped_ptr<Pipeline> pipeline_;
+        boost::scoped_ptr<Configuration> config_;
+        boost::scoped_ptr<MovieSaver> movie_saver_;
+        unsigned int selected_clip_;
+        // Aug 25 2010:tmatth:TODO:use shared_ptr, not raw pointers for clips_
         std::tr1::unordered_map<int, Clip*> clips_;
 };
 

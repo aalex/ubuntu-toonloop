@@ -18,6 +18,7 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef __PIPELINE_H__
 #define __PIPELINE_H__
 
@@ -27,15 +28,19 @@
 #include "configuration.h"
 #include "image.h"
 
+class Application;
+/** GStreamer video pipeline for grabbing images from a camera.
+ */
 class Pipeline
 {
     public:
         void stop();
-        Pipeline();
+        Pipeline(Application* owner);
         ~Pipeline();
         void grab_frame();
         void remove_frame();
     private:
+        Application* owner_;
         GstElement* videosrc_;
         GstElement* videosink_;
         GstElement* gdkpixbufsink_;
