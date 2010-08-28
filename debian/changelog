@@ -1,3 +1,9 @@
+toonloop (1.9.3-1) lucid; urgency=low
+
+  * New upstream release
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Fri, 27 Aug 2010 22:42:10 -0400
+
 toonloop (1.9.2-2) lucid; urgency=low
 
   * Added mencoder deps + better description
