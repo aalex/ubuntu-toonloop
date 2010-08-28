@@ -28,13 +28,10 @@
 #include <tr1/memory>
 #include <boost/thread/mutex.hpp>
 
-using namespace std::tr1; // shared_ptr
-
-/**
- * A clip is a list of images.
- */
 // FIXME: vector is not thread safe. You need to protect it with a mutex or such.
-Clip::Clip(int id)
+/** Each clip needs a unique ID.
+ */
+Clip::Clip(unsigned int id)
 {
     // FIXME: How to use a 2-int vector?
     //intervalometer_rate_(1, 1); // default: 1 FPS
@@ -44,55 +41,56 @@ Clip::Clip(int id)
     playhead_ = 0;
     playhead_fps_ = 12; // some default for now
     has_recorded_a_frame_ = false;
+    direction_ = DIRECTION_FORWARD;
+    yoyo_sub_direction_ = DIRECTION_FORWARD;
     //mutex_;
 }
 
-void Clip::set_directory_path(std::string directory_path)
+void Clip::set_directory_path(const std::string &directory_path)
 {
     directory_path_ = directory_path;
 }
 
 // TODO: make sure the number of consecutive slashes in the path is ok
-std::string Clip::get_image_full_path(Image* image)
+std::string Clip::get_image_full_path(Image* image) const
 {
-    //std::string project_path = Application::get_instance().get_configuration().get_project_home();
     std::string project_path = get_directory_path();
     std::string image_name = image->get_name() + get_image_file_extension(); //".jpg";
-    //std::string file_name = fs::path(project_path) / image_name; 
     // TODO: use boost:file_system to append paths
     return project_path + "/" + IMAGES_DIRECTORY + "/" + image_name; 
 }
 
-int Clip::get_playhead_fps()
+unsigned int Clip::get_playhead_fps() const
 {
     return playhead_fps_;
 }
-void Clip::set_playhead_fps(int fps)
+
+void Clip::set_playhead_fps(unsigned int fps)
 {
     playhead_fps_ = fps;
 }
 
-int Clip::get_id()
+unsigned int Clip::get_id() const
 {
     return id_;
 }
 
-int Clip::get_width()
+unsigned int Clip::get_width() const
 {
     return width_;
 }
 
-int Clip::get_height()
+unsigned int Clip::get_height() const
 {
     return height_;
 }
 
-void Clip::set_width(int width)
+void Clip::set_width(unsigned int width)
 {
     width_ = width;
 }
 
-void Clip::set_height(int height)
+void Clip::set_height(unsigned int height)
 {
     height_ = height;
 }
@@ -100,14 +98,16 @@ void Clip::set_height(int height)
  * Adds an image to the clip.
  * Returns the its index.
  */
-int Clip::frame_add()
+unsigned int Clip::frame_add()
 {
-    int assigned = writehead_;
+    using namespace std::tr1; // shared_ptr
+
+    unsigned int assigned = writehead_;
     std::string name = timing::get_iso_datetime_for_now();
     //images_.push_back(shared_ptr<Image>(new Image(name)));
     images_.insert(images_.begin() + writehead_, shared_ptr<Image>(new Image(name)));
     //images_[writehead_] = new Image(name);
-    writehead_ ++;
+    writehead_++;
     return assigned;
 }
 
@@ -116,59 +116,116 @@ int Clip::frame_add()
  * Returns how many images it has deleted. (0 or 1)
  */
 // FIXME: this is not thread-safe, isn't it? (we must used shared_ptr)
-int Clip::frame_remove()
+unsigned int Clip::frame_remove()
 {
-    int how_many_deleted = 0;
-    //int len = size();
-    //unsigned int len = writehead_;
-    if (writehead_ == 0) // TODO: ! images_.empty()
+    unsigned int how_many_deleted = 0;
+    if (images_.empty()) 
     {
-        std::cout << "Cannot delete a frame since writehead is at the beginning of the clip." << std::endl;
-    } else if (images_.empty()) {
         std::cout << "Cannot delete a frame since the clip is empty." << std::endl;
-    } else if (writehead_ > images_.size()) {
-        std::cout << "Cannot delete a frame since the writehead points to a non-existing frame index " << writehead_ << " while the clip has only " << images_.size() << " images." << std::endl;
-    } else {
-        std::cout << "Deleting image at position " << (writehead_ - 1) << "/" << images_.size() << std::endl;
+    } 
+    else if (size() == 1 && writehead_ == 1)
+    {
+        clear_all_images(); // takes care of writehead_ and playhead_
+    }
+    else if (writehead_ > images_.size()) 
+    {
+        std::cout << "Cannot delete a frame since the writehead points to a " <<
+            "non-existing frame index " << writehead_ << " while the clip has only " << 
+        images_.size() << " images." << std::endl;
+        //TODO:2010-08-27:aalex:Move the writehead to the end of clip and erase a frame anyways.
+    } 
+    else if (writehead_ == 0)
+    {
+        std::cout << "Cannot delete a frame since writehead is at 0" << std::endl;
+    }
+    else 
+    {
+        std::cout << "Deleting image at position " << (writehead_ - 1) << "/" << (images_.size()  - 1) << std::endl;
         images_.erase(images_.begin() + (writehead_ - 1));
-        writehead_ --; 
         how_many_deleted = 1;
+        // let's decrement the writehead and playhead
+        --writehead_;
+        if (playhead_ >= size())
+        {
+            if (size() == 0)
+                playhead_ = 0;
+            else
+                playhead_ = size() - 1;
+        }
     }
     return how_many_deleted;
 }
 
 
-int Clip::get_playhead()
+unsigned int Clip::get_playhead() const
 {
     return playhead_;
 }
 
-int Clip::iterate_playhead()
+unsigned int Clip::get_writehead() const
 {
-    //int len = size();
-    unsigned int len = writehead_;
-    // TODO: implement BACK_AND_FORTH and BACKWARD directions
-    if (len == 0) {
+    return writehead_;
+}
+
+unsigned int Clip::iterate_playhead()
+{
+    unsigned int len = size();
+    if (len == 0)
         playhead_ = 0;
-    } else if (playhead_ >= len - 1) // >= ?
+    else 
     {
-        playhead_ = 0;
-    } else {
-        playhead_ ++;
-    }
+        // clip has at leat 1 of length
+        switch (direction_)
+        {
+        case DIRECTION_FORWARD:
+            if (playhead_ >= len - 1)
+                playhead_ = 0;
+            else 
+                ++playhead_;
+            break;
+        case DIRECTION_BACKWARD:
+            if (playhead_ == 0)
+                playhead_ = len - 1;
+            else 
+                --playhead_;
+            break;
+        // a slightly more complex type is the yoyo:
+        case DIRECTION_YOYO:
+            if (yoyo_sub_direction_ == DIRECTION_BACKWARD)
+            {
+                if (playhead_ == 0)
+                {
+                    playhead_ = 1;
+                    yoyo_sub_direction_ = DIRECTION_FORWARD;
+                } else 
+                    --playhead_;
+            } else {
+                if (playhead_ >= len - 1)
+                {
+                    if (len == 1)
+                        playhead_ = 0;
+                    else
+                        playhead_ = len - 2;
+                    yoyo_sub_direction_ = DIRECTION_BACKWARD;
+                } else 
+                    ++playhead_;
+            }
+            break;
+        } // switch
+    } // else
     return playhead_;
 }
 
-int Clip::size()
+unsigned int Clip::size() const
 {
-    int ret = static_cast<int>(images_.size());
+    int ret = static_cast<unsigned int>(images_.size());
     return ret;
 }
 
 /**
  * Returns NULL if there is no image at the given index.
  */
-Image& Clip::get_image(int index)
+Image* Clip::get_image(unsigned int index) const
 {
     // FIXME: will crash if no image at that index
     //if (images_.empty())
@@ -181,15 +238,27 @@ Image& Clip::get_image(int index)
     //    std::cout << "ERROR: There is no image at index " << index << " in the clip! Total is " << images_.size() << "." << std::endl;
     //    return NULL;
     //}
-    return *images_.at(index); // FIXME: is this OK?
+    try 
+    {
+        Image *img = images_.at(index).get();
+        return img;
+    }
+    catch (const std::out_of_range &e)
+    {
+        // Aug 25 2010:tmatth:FIXME we should actually prevent callers' 
+        // logic from trying to get invalid framenumbers
+        std::cerr << "Clip::get_image: Got exception " << e.what() << std::endl;
+        return 0;
+    }
 }
 
 void Clip::increase_playhead_fps()
 {
     if (playhead_fps_ < MAX_FPS)
     {
-        ++ playhead_fps_;
-        std::cout << "FPS: " << playhead_fps_ << std::endl;
+        ++playhead_fps_;
+        //TODO:2010-08-26:aalex:Do not print if not verbose
+        std::cout << "Playback FPS: " << playhead_fps_ << std::endl;
     }
 }
 
@@ -198,21 +267,22 @@ void Clip::decrease_playhead_fps()
     if (playhead_fps_ > 1)
     {
         -- playhead_fps_;
-        std::cout << "FPS: " << playhead_fps_ << std::endl;
+        //TODO:2010-08-26:aalex:Do not print if not verbose
+        std::cout << "Playback FPS: " << playhead_fps_ << std::endl;
     }
 }
 
-void Clip::lock_mutex()
-{
-    mutex_.lock();
-}
+// void Clip::lock_mutex()
+// {
+//     mutex_.lock();
+// }
+// 
+// void Clip::unlock_mutex()
+// {
+//     mutex_.unlock();
+// }
 
-void Clip::unlock_mutex()
-{
-    mutex_.unlock();
-}
-
-bool Clip::get_has_recorded_frame()
+bool Clip::get_has_recorded_frame() const
 {
     return has_recorded_a_frame_;
 }
@@ -220,5 +290,12 @@ bool Clip::get_has_recorded_frame()
 void Clip::set_has_recorded_frame()
 {
     has_recorded_a_frame_ = true;
+}
+
+void Clip::clear_all_images()
+{
+    images_.clear();
+    playhead_ = 0;
+    writehead_ = 0;
 }
 

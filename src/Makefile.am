@@ -1,4 +1,12 @@
 bin_PROGRAMS = toonloop
+EXTRA_DIST = doxyfile.in
+
+html-local: doxygen
+doxygen:
+	@if [ -z `which doxygen` ]; then echo "No Doxygen!"; else doxygen; fi
+clean-local:
+	rm -rf html
+
 # noinst_PROGRAMS = 
 
 headers = \
@@ -6,6 +14,7 @@ headers = \
 	clip.h \
 	config.h \
 	configuration.h \
+	controller.h \
 	gui.h \
 	image.h \
 	log.h \
@@ -19,12 +28,14 @@ headers = \
 	subprocess.h \
 	timer.h \
 	timing.h \
+    unused.h \
 	v4l2util.h
 
 toonloop_SOURCES = \
 	application.cpp \
 	clip.cpp \
 	configuration.cpp \
+	controller.cpp \
 	gui.cpp \
 	image.cpp \
 	main.cpp \

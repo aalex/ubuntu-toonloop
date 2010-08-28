@@ -37,7 +37,7 @@ host_triplet = @host@
 bin_PROGRAMS = toonloop$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/config.h.in
+	$(srcdir)/config.h.in $(srcdir)/doxyfile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/as-ac-expand.m4 \
 	$(top_srcdir)/m4/ax_boost_base.m4 \
@@ -53,21 +53,21 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = config.h
-CONFIG_CLEAN_FILES =
+CONFIG_CLEAN_FILES = doxyfile
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am__objects_1 =
 am_toonloop_OBJECTS = toonloop-application.$(OBJEXT) \
 	toonloop-clip.$(OBJEXT) toonloop-configuration.$(OBJEXT) \
-	toonloop-gui.$(OBJEXT) toonloop-image.$(OBJEXT) \
-	toonloop-main.$(OBJEXT) toonloop-midi.$(OBJEXT) \
-	toonloop-moviesaver.$(OBJEXT) toonloop-pipeline.$(OBJEXT) \
-	toonloop-saverworker.$(OBJEXT) toonloop-subprocess.$(OBJEXT) \
-	toonloop-timer.$(OBJEXT) toonloop-timing.$(OBJEXT) \
-	toonloop-v4l2util.$(OBJEXT) toonloop-oscinterface.$(OBJEXT) \
-	toonloop-oscreceiver.$(OBJEXT) toonloop-oscsender.$(OBJEXT) \
-	$(am__objects_1)
+	toonloop-controller.$(OBJEXT) toonloop-gui.$(OBJEXT) \
+	toonloop-image.$(OBJEXT) toonloop-main.$(OBJEXT) \
+	toonloop-midi.$(OBJEXT) toonloop-moviesaver.$(OBJEXT) \
+	toonloop-pipeline.$(OBJEXT) toonloop-saverworker.$(OBJEXT) \
+	toonloop-subprocess.$(OBJEXT) toonloop-timer.$(OBJEXT) \
+	toonloop-timing.$(OBJEXT) toonloop-v4l2util.$(OBJEXT) \
+	toonloop-oscinterface.$(OBJEXT) toonloop-oscreceiver.$(OBJEXT) \
+	toonloop-oscsender.$(OBJEXT) $(am__objects_1)
 toonloop_OBJECTS = $(am_toonloop_OBJECTS)
 am__DEPENDENCIES_1 =
 toonloop_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -251,12 +251,15 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+EXTRA_DIST = doxyfile.in
+
 # noinst_PROGRAMS = 
 headers = \
 	application.h \
 	clip.h \
 	config.h \
 	configuration.h \
+	controller.h \
 	gui.h \
 	image.h \
 	log.h \
@@ -270,12 +273,14 @@ headers = \
 	subprocess.h \
 	timer.h \
 	timing.h \
+    unused.h \
 	v4l2util.h
 
 toonloop_SOURCES = \
 	application.cpp \
 	clip.cpp \
 	configuration.cpp \
+	controller.cpp \
 	gui.cpp \
 	image.cpp \
 	main.cpp \
@@ -370,6 +375,8 @@ $(srcdir)/config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f config.h stamp-h1
+doxyfile: $(top_builddir)/config.status $(srcdir)/doxyfile.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-binPROGRAMS: $(bin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(bindir)" || $(MKDIR_P) "$(DESTDIR)$(bindir)"
@@ -426,6 +433,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-application.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-clip.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-configuration.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-controller.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-gui.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-main.Po@am__quote@
@@ -503,6 +511,20 @@ toonloop-configuration.obj: configuration.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='configuration.cpp' object='toonloop-configuration.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-configuration.obj `if test -f 'configuration.cpp'; then $(CYGPATH_W) 'configuration.cpp'; else $(CYGPATH_W) '$(srcdir)/configuration.cpp'; fi`
+
+toonloop-controller.o: controller.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-controller.o -MD -MP -MF $(DEPDIR)/toonloop-controller.Tpo -c -o toonloop-controller.o `test -f 'controller.cpp' || echo '$(srcdir)/'`controller.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-controller.Tpo $(DEPDIR)/toonloop-controller.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='controller.cpp' object='toonloop-controller.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-controller.o `test -f 'controller.cpp' || echo '$(srcdir)/'`controller.cpp
+
+toonloop-controller.obj: controller.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-controller.obj -MD -MP -MF $(DEPDIR)/toonloop-controller.Tpo -c -o toonloop-controller.obj `if test -f 'controller.cpp'; then $(CYGPATH_W) 'controller.cpp'; else $(CYGPATH_W) '$(srcdir)/controller.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-controller.Tpo $(DEPDIR)/toonloop-controller.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='controller.cpp' object='toonloop-controller.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-controller.obj `if test -f 'controller.cpp'; then $(CYGPATH_W) 'controller.cpp'; else $(CYGPATH_W) '$(srcdir)/controller.cpp'; fi`
 
 toonloop-gui.o: gui.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-gui.o -MD -MP -MF $(DEPDIR)/toonloop-gui.Tpo -c -o toonloop-gui.o `test -f 'gui.cpp' || echo '$(srcdir)/'`gui.cpp
@@ -822,7 +844,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-binPROGRAMS clean-generic clean-libtool mostlyclean-am
+clean-am: clean-binPROGRAMS clean-generic clean-libtool clean-local \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -836,7 +859,7 @@ dvi-am:
 
 html: html-am
 
-html-am:
+html-am: html-local
 
 info: info-am
 
@@ -893,19 +916,26 @@ uninstall-am: uninstall-binPROGRAMS
 .MAKE: all install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-binPROGRAMS \
-	clean-generic clean-libtool ctags distclean distclean-compile \
-	distclean-generic distclean-hdr distclean-libtool \
-	distclean-tags distdir dvi dvi-am html html-am info info-am \
-	install install-am install-binPROGRAMS install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am uninstall-binPROGRAMS
+	clean-generic clean-libtool clean-local ctags distclean \
+	distclean-compile distclean-generic distclean-hdr \
+	distclean-libtool distclean-tags distdir dvi dvi-am html \
+	html-am html-local info info-am install install-am \
+	install-binPROGRAMS install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-ps install-ps-am \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+	pdf pdf-am ps ps-am tags uninstall uninstall-am \
+	uninstall-binPROGRAMS
 
+
+html-local: doxygen
+doxygen:
+	@if [ -z `which doxygen` ]; then echo "No Doxygen!"; else doxygen; fi
+clean-local:
+	rm -rf html
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

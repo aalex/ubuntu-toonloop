@@ -19,8 +19,12 @@
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __VIDEO_CONFIG_H__
-#define __VIDEO_CONFIG_H__
+/**
+ * Configuration for Toonloop.
+ */
+
+#ifndef __CONFIGURATION_H__
+#define __CONFIGURATION_H__
 
 #include <string>
 #include <boost/program_options.hpp>
@@ -46,9 +50,8 @@ const std::string MOVIES_DIRECTORY = "movies";
  */
 const std::string DEFAULT_PROJECT_HOME = "~/Documents/toonloop/default";
 
-const std::string OSC_RECV_PORT_NONE = "";
-/**
- * Contains the configuration options for the whole application.
+const std::string OSC_PORT_NONE = "";
+/** Contains the configuration options for Toonloop.
  */
 class Configuration
 {
@@ -66,12 +69,14 @@ class Configuration
         bool fullscreen() const { return fullscreen_; }
         bool get_effects_enabled() const { return enable_effects_; }
         void set_effects_enabled(bool enabled) { enable_effects_ = enabled; }
-        void set_project_home(std::string project_home);
-        void set_video_source(std::string video_source);
+        void set_project_home(const std::string &project_home);
+        void set_video_source(const std::string &video_source);
         bool get_verbose() const { return verbose_; } ;
         bool get_fullscreen() const { return fullscreen_; } ;
         int get_midi_input_number() const { return midi_input_number_; }
         std::string get_osc_recv_port() const { return osc_recv_port_; }
+        std::string get_osc_send_port() const { return osc_send_port_; }
+        std::string get_osc_send_addr() const { return osc_send_addr_; }
     private:
         //int capture_frame_rate_;
         //int rendering_frame_rate_;
@@ -84,6 +89,8 @@ class Configuration
         bool verbose_;
         int midi_input_number_;
         std::string osc_recv_port_;
+        std::string osc_send_port_;
+        std::string osc_send_addr_;
 };
-#endif // __VIDEO_CONFIG_H__
+#endif // __CONFIGURATION_H__
 

@@ -1,32 +1,40 @@
-2010-08-24: Toonloop 1.9.2
+2010-08-27: Toonloop 1.9.3
 
-This release is an unstable version in the 1.9 series. This version contains new features preparing the 2.0 stable series. Since the 1.2 series, we have done a complete rewrite of the application in C++. 
+This release is an unstable version in the 1.9 series. This version contains new features preparing the 2.0 stable series. At this point, it's almost feature-complete with a basic GUI for live performances.
 
 New features:
-    * MIDI input controls with the sustain pedal
-    * Switch between clips with the number keys
-    * Installing the icon
-    * Installing the desktop file
-    * Using the installed icon for window
-    * Updated README with info about GLX and test src
-    * Added the --list-cameras option
-    * Saving the current clip as a movie file
-    * saving: Use the FPS of the current clip for the saved movie
-    * saving: use glib's subprocess functions
-    * saving: Create a directory for movies and one for images, in the project dir.
-    * osc: Support the --osc-receive-port option
+    * Created the Controller class
+    * Hitting the period key toggles the layout
+    * moved Application::on_pedal_down to MidiInput::on_pedal_down
+    * Improved comments to create doc with doxygen.
+    * Added the make html target, which creates HTML doc with doxygen
+    * adding file OSC, which documents the OSC messages send/received
+    * documented key strokes
+    * Tab changes the playback direction
+    * The r key clears the current clip
+    * Changed for an icon that is visible on a black or white background
 
 Bug fixes: 
-    * No more blank image when one is taken when none had been received yet.
-    * Fixed how the video-input option is parsed
-    * corrections in dependencies
-    * Made missing deps more explicit
-    * lowered required version of gst-interface
-    * Using boost::signals2
-    * Had missing include guards in midi.h
-    * Was not possible to open MIDI input 1
-    * Fixed g++ warnings
-    * Use delete [] for memory allocated with new []
-    * remove the --keep-in-ram related code
-    * Fixed make distcheck target
+    * removed unused shader.cpp
+    * Using unsigned int for images and clips
+    * passing Application* to most classes to their owner_ attribute
+    * use const std::string & parameters
+    * use forward declarations where possible
+    * application: keep free function out of global namespace
+    * application: use pointers instead of references, and iterators instead of raw for loops
+    * application: fixed memory leak. Make sure we delete unordered map clips_ in destructor
+    * clip: catch out_of_range in get_image
+    * use scoped_ptr instead of shared_ptr where possible.
+    *  limit scope of using declarations
+    * removed unused parameters, added extra warning flags
+    * constructor invocation cleanup. removed extraneous parentheses when calling new
+    * application.cpp:137: create objects on the stack when possible
+    * Fixed a bug with first image same as before after the clip is cleared
+    * Setting up the OSC sender port doesn't work
+    * No more crash when we delete an image sometimes.
+    * removed the Application::get_instance singleton static method
+    * Figured out why the call to get_image in gui.cpp is sometimes out_of_range playhead when we delete frames
+
+Know bugs:
+    * The user cannot use gstreamer-properties to choose a camera, but must provide a command-line argument to Toonloop.
 

@@ -18,6 +18,7 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef __GUI_H__
 #define __GUI_H__
 
@@ -26,15 +27,23 @@
 #include <clutter/clutter.h>
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
+#include "application.h"
 
 const int WINWIDTH = 640;
 const int WINHEIGHT = 480;
 
+enum layout_number {
+    LAYOUT_SPLITSCREEN,
+    LAYOUT_PLAYBACK_ONLY
+};
+
+/** This graphical user interface uses GTK and Clutter-GST.
+ */
 class Gui
 {
     public:
         ClutterActor* get_live_input_texture();
-        Gui(); 
+        Gui(Application* owner); 
         ~Gui() {};
         void toggleFullscreen() { toggleFullscreen(window_); } // no argument version of the same method below.
         ClutterActor *stage_;
@@ -45,22 +54,28 @@ class Gui
         void resize_actors();
         float video_input_width_;
         float video_input_height_;
-        void switch_to_clip_number(unsigned int key_val);
+        void on_next_image_to_play(unsigned int clip_number, unsigned int image_number, std::string file_name);
+        Application* owner_;
+        static void on_delete_event(GtkWidget* widget, GdkEvent* event, gpointer user_data);
+        static gboolean key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data);
+
+        static int on_window_state_event(_GtkWidget *widget, _GdkEventWindowState *event, gpointer user_data);
+
+        static void on_render_frame(ClutterTimeline * timeline, gint msecs, gpointer user_data);
+        void toggleFullscreen(GtkWidget* widget);
+        void makeFullscreen(GtkWidget* widget);
+        void makeUnfullscreen(GtkWidget* widget);
+        bool isFullscreen_;
+        layout_number get_layout() { return current_layout_; }
+        void set_layout(layout_number layout);
+        void toggle_layout();
     private:
         GtkWidget *window_;
         GtkWidget *clutter_widget_;
         GtkWidget *vbox_;
-        GLXContext glx_context_;
-        static void on_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data);
-        static gboolean key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer data);
-
-        static int onWindowStateEvent(_GtkWidget *widget, _GdkEventWindowState *event, void *data);
-        void toggleFullscreen(GtkWidget* widget);
-        void makeFullscreen(GtkWidget* widget);
-        void makeUnfullscreen(GtkWidget* widget);
         void hideCursor();
         void showCursor();
-        bool isFullscreen_;
+        layout_number current_layout_;
 };
 
 #endif // __GUI_H__

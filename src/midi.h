@@ -18,25 +18,33 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+
 #ifndef _MIDI_H_
 #define _MIDI_H_
 
 #include <boost/signals2.hpp>
 #include <stk/RtMidi.h>
 
+class Application;
+
+/** MIDI input using RtMidi allowing a pedal to control frame grabbing.
+ */
 class MidiInput
 {
     public:
-        MidiInput();
+        MidiInput(Application *owner);
         bool open(unsigned int port);
         ~MidiInput();
-        const void enumerate_devices();
+        void enumerate_devices() const;
         static void input_message_cb(double delta_time, std::vector<unsigned char> *message, void *user_data);
-        const bool is_open();
+        bool is_open() const;
         boost::signals2::signal<void ()> pedal_down_signal_;
         bool verbose_;
         void set_verbose(bool verbose);
     private:
+        Application *owner_;
+        void on_pedal_down();
         unsigned int port_;
         unsigned int ports_count_;
         RtMidiIn *midi_in_;

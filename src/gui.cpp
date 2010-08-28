@@ -29,17 +29,22 @@
 #include <gtk/gtk.h>
 #include <iostream>
 
-#include "pipeline.h"
-#include "gui.h"
 #include "application.h"
+#include "clip.h"
 #include "config.h"
+#include "controller.h"
+#include "gui.h"
+#include "pipeline.h"
 #include "timer.h"
 
 namespace fs = boost::filesystem;
 
-gboolean Gui::onWindowStateEvent(GtkWidget* widget, GdkEventWindowState *event, gpointer data)
+/**
+ * In fullscreen mode, hides the cursor. In windowed mode, shows the cursor.
+ */
+gboolean Gui::on_window_state_event(GtkWidget* /*widget*/, GdkEventWindowState *event, gpointer user_data)
 {
-    Gui *context = static_cast<Gui*>(data);
+    Gui *context = static_cast<Gui*>(user_data);
     context->isFullscreen_ = (event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN);
     if (context->isFullscreen_)
         context->hideCursor();
@@ -47,7 +52,9 @@ gboolean Gui::onWindowStateEvent(GtkWidget* widget, GdkEventWindowState *event, 
         context->showCursor();
     return TRUE;
 }
-
+/**
+ * In fullscreen mode, hides the cursor.
+ */
 void Gui::hideCursor()
 {
     // FIXME: this is because gtk doesn't support GDK_BLANK_CURSOR before gtk-2.16
@@ -64,55 +71,71 @@ void Gui::hideCursor()
     gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), cursor);
 }
 
+/**
+ * In windowed mode, shows the cursor.
+ */
 void Gui::showCursor()
 {
     /// sets to default
     gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), NULL);
 }
 
-gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer data)
+/**
+ * Handles key pressed event.
+ *
+ * Up: increase playhead FPS
+ * Down: decrease playhead FPS
+ * Backscape: remove a frame
+ * Escape or f: toggle full screen mode
+ * Space: add a frame
+ * Page Up: choose next clip
+ * Page Down: choose previous clip
+ * 0, 1, 2, 3, 4, 5, 6, 7, 8, 9: choose a clip
+ * Ctrl-q: quit
+ * Ctrl-s: save
+ * period: toggles the layout
+ * Tab: changes the playback direction
+ */
+
+gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
-    Gui *context = static_cast<Gui*>(data);
-    Clip *current_clip = Application::get_instance().get_current_clip();
-    int clip;
+    Gui *context = static_cast<Gui*>(user_data);
 
     switch (event->keyval)
     {
         case GDK_Up:
-            current_clip->increase_playhead_fps();
+            context->owner_->get_controller()->increase_playhead_fps();
             break;
         case GDK_Down:
-            current_clip->decrease_playhead_fps();
+            context->owner_->get_controller()->decrease_playhead_fps();
             break;
         //case GDK_Left:
         //case GDK_Right:
-        //case GDK_Return:
-        case GDK_BackSpace:
-            Application::get_instance().get_pipeline().remove_frame();
+        case GDK_Tab:
+            context->owner_->get_controller()->change_current_clip_direction();
             break;
+        case GDK_period:
+            //TODO:2010-08-27:aalex:Create Controller:toggle_layout
+            context->toggle_layout();
+            break;
+        case GDK_r:
+            context->owner_->get_controller()->clear_current_clip();
+            break;
+        case GDK_BackSpace:
+            context->owner_->get_controller()->remove_frame();
+            break;
+        case GDK_f:
         case GDK_Escape:
             context->toggleFullscreen(widget);
             break;
         case GDK_space:
-            Application::get_instance().get_pipeline().grab_frame();
+            context->owner_->get_controller()->add_frame();
             break;
         case GDK_Page_Up:
-            clip = Application::get_instance().get_current_clip_number();
-            if (clip < MAX_CLIPS - 1)
-            {
-                Application::get_instance().set_current_clip_number(clip + 1);
-                // Not needed, but we never know:
-                current_clip = Application::get_instance().get_current_clip();
-            }
+            context->owner_->get_controller()->choose_previous_clip();
             break;
         case GDK_Page_Down:
-            clip = Application::get_instance().get_current_clip_number();
-            if (clip > 0)
-            {
-                Application::get_instance().set_current_clip_number(clip - 1);
-                // Not needed, but we never know:
-                current_clip = Application::get_instance().get_current_clip();
-            }
+            context->owner_->get_controller()->choose_next_clip();
             break;
         case GDK_0:
         case GDK_1:
@@ -124,17 +147,23 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer da
         case GDK_7:
         case GDK_8:
         case GDK_9:
-            context->switch_to_clip_number(event->keyval);
-            // Not needed, but we never know:
-            current_clip = Application::get_instance().get_current_clip();
+        {   // need to use brackets when declaring variable inside case
+            //* Switch the current clip according to a gdk key value from 0 to 9
+            //* keyval should be one of :
+            //* GDK_0 GDK_1 GDK_2 GDK_3 GDK_4 GDK_5 GDK_6 GDK_7 GDK_8 GDK_9
+            //* Of course, any other value might lead to a crash.
+            // FIXME:2010-08-17:aalex:Doing arithmetics with a gdk keyval is a hack
+            unsigned int index = (event->keyval & 0x0F);
+            context->owner_->get_controller()->choose_clip(index);
             break;
+        }
         case GDK_q:
             // Quit application on ctrl-q, this quits the main loop
             // (if there is one)
             if (event->state & GDK_CONTROL_MASK)
             {
                 g_print("Ctrl-Q key pressed, quitting.\n");
-                Application::get_instance().quit();
+                context->owner_->quit();
             }
             break;
         case GDK_s:
@@ -143,7 +172,7 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer da
             if (event->state & GDK_CONTROL_MASK)
             {
                 g_print("Ctrl-S key pressed, saving.\n");
-                Application::get_instance().save_current_clip();
+                context->owner_->get_controller()->save_current_clip();
             }
             break;
         default:
@@ -152,159 +181,110 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer da
     return TRUE;
 }
 /**
- * Switch the current clip according to a gdk key value from 0 to 9.
- *
- * keyval should be one of :
- * GDK_0 GDK_1 GDK_2 GDK_3 GDK_4 GDK_5 GDK_6 GDK_7 GDK_8 GDK_9
- * Of course, any other value might lead to a crash.
+ * Called when the window is deleted. Quits the application.
  */
-void Gui::switch_to_clip_number(unsigned int key_val) 
+void Gui::on_delete_event(GtkWidget* /*widget*/, GdkEvent* /*event*/, gpointer user_data)
 {
-    // FIXME:2010-08-17:aalex:Doing arithmetics with a gdk keyval is a hack
-    unsigned int index = key_val & 0x0F;
-    if (index > MAX_CLIPS)
-        std::cout << "Invalid clip number " << index << std::endl;
-    else {
-        unsigned int clipIndex = Application::get_instance().get_current_clip_number();
-        if (clipIndex != index) 
-            Application::get_instance().set_current_clip_number(index);
-    }
-}
-
-void Gui::on_delete_event(GtkWidget* widget, GdkEvent* event, gpointer data)
-{
-    //Gui *context = static_cast<Gui*>(data);
+    Gui *context = static_cast<Gui*>(user_data);
     g_print("Window has been deleted.\n");
-    Application::get_instance().quit();
+    context->owner_->quit();
 }
-
+/**
+ * Toggles fullscreen mode on/off.
+ */
 void Gui::toggleFullscreen(GtkWidget *widget)
 {
     // toggle fullscreen state
     isFullscreen_ ? makeUnfullscreen(widget) : makeFullscreen(widget);
 }
-
+/** 
+ * Makes the window fullscreen.
+ */
 void Gui::makeFullscreen(GtkWidget *widget)
 {
     gtk_window_stick(GTK_WINDOW(widget)); // window is visible on all workspaces
     gtk_window_fullscreen(GTK_WINDOW(widget));
 }
-
+/**
+ * Makes the window not fullscreen.
+ */
 void Gui::makeUnfullscreen(GtkWidget *widget)
 {
     gtk_window_unstick(GTK_WINDOW(widget)); // window is not visible on all workspaces
     gtk_window_unfullscreen(GTK_WINDOW(widget));
 }
-
-void iterate_playhead()
+/**
+ * Slot for the Controller's next_image_to_play_signal_ signal.
+ *
+ * Called when it's time to update the image to play back.
+ */
+void Gui::on_next_image_to_play(unsigned int /*clip_number*/, unsigned int/*image_number*/, std::string file_name)
 {
-    Gui gui = Application::get_instance().get_gui();
-    Pipeline pipeline = Application::get_instance().get_pipeline();
-    
-    static int number_of_frames_in_last_second = 0; // counting FPS
-    static int prev_image_number = -1;
-    static Clip *prevclip = NULL;
-    static Timer fps_calculation_timer = Timer();
-    static Timer playback_timer = Timer(); // TODO: move to Clip
-//    static GLuint frametexture;
-//    GLint texturelocation;
-    bool move_playhead = false;
-    Clip *thisclip = Application::get_instance().get_current_clip();
-    bool need_refresh = false;
-//
-//    thisclip->lock_mutex();
-//
-    ++ number_of_frames_in_last_second;
-    playback_timer.tick();
-    fps_calculation_timer.tick();
-
-    // check if it is time to move the playhead
-    if ((playback_timer.get_elapsed()) >=  (1.0f / thisclip->get_playhead_fps() * 1.0) || playback_timer.get_elapsed() < 0.0f)
+    GError *error = NULL;
+    gboolean success;
+    success = clutter_texture_set_from_file(CLUTTER_TEXTURE(playback_texture_), file_name.c_str(), &error);
+    // TODO: validate this path
+    if (!success)
     {
-        move_playhead = true;
-        playback_timer.reset();
+        std::cerr << "Failed to load pixbuf file: " << file_name << " " << error->message << std::endl;
+        g_error_free(error);
+    } else {
+        //std::cout << "Loaded image " <<  image_full_path << std::endl;
     }
+}
+/** 
+ * Called on every frame. 
+ *
+ * (Clutter Timeline handler)
+ * Times the playback frames and display it if it's time to do so.
+ *
+ * Prints the rendering FPS information.
+ * Calls Controller::update_playback_image
+ */
+void Gui::on_render_frame(ClutterTimeline * /*timeline*/, gint /*msecs*/, gpointer user_data)
+{
+    // Prints rendering FPS information
+    static int number_of_frames_in_last_second = 0; // counting FPS
+    static Timer fps_calculation_timer = Timer();
+    
+    Gui *context = static_cast<Gui*>(user_data);
+    bool verbose = context->owner_->get_configuration()->get_verbose();
+    Clip *thisclip = context->owner_->get_current_clip();
+
+    fps_calculation_timer.tick();
+    ++number_of_frames_in_last_second;
     // calculate rendering FPS
     if (fps_calculation_timer.get_elapsed() >= 1.0f)
     {
-        if (Application::get_instance().get_configuration().get_verbose())
+        if (verbose)
             std::cout << "Rendering FPS: " << number_of_frames_in_last_second << std::endl;
         number_of_frames_in_last_second = 0;
         fps_calculation_timer.reset();
     }
-    
+
+    context->owner_->get_controller()->update_playback_image();
+
+    //TODO:2010-08-26:aalex:connect to Controller's on_no_image_to_play
     if(thisclip->size() > 0) 
     {     
-        if (! CLUTTER_ACTOR_IS_VISIBLE(gui.playback_texture_))
-            clutter_actor_show_all(CLUTTER_ACTOR(gui.playback_texture_));
+        if (! CLUTTER_ACTOR_IS_VISIBLE(context->playback_texture_))
+            clutter_actor_show_all(CLUTTER_ACTOR(context->playback_texture_));
     } else {
-        if (CLUTTER_ACTOR_IS_VISIBLE(gui.playback_texture_))
-            clutter_actor_hide_all(CLUTTER_ACTOR(gui.playback_texture_));
+        if (CLUTTER_ACTOR_IS_VISIBLE(context->playback_texture_))
+            clutter_actor_hide_all(CLUTTER_ACTOR(context->playback_texture_));
     }
-    if(thisclip->size() > 0) 
-    {     
-            
-        // FIXME: we don't need to create a texture on every frame!!
-        //double spf = (1 / thisclip->get_playhead_fps());
-        if (move_playhead) // if it's time to move the playhead
-            thisclip->iterate_playhead(); // updates the clip's playhead number
-        int image_number = thisclip->get_playhead();
-        //width = thisclip->get_width(); 
-        //height = thisclip->get_height();
-        Image* thisimage = &(thisclip->get_image(image_number));
-
-        if ( (prevclip != thisclip) || (prev_image_number != image_number) )
-              need_refresh = true;
-        if (prevclip != thisclip) {
-            prevclip = thisclip;
-        }
-        if (thisimage == NULL)
-        {
-            std::cout << "No image at index" << image_number << "." << std::endl;
-        } else {
-            /*FIXME: we may not need this dimension update in general. But I get a weirdly cropped frame, for the right side rendering grabbed frame. It seems
-            the grabbed frame dimensions don't match with the width, height passed from glimasesink to the draw callback*/
-            // XXX: yes, I think we should always check the size of the images. (especially when we will read them from the disk)
-
-            if (need_refresh)
-            {
-                std::string image_full_path = thisclip->get_image_full_path(thisimage);
-                GError *error = NULL;
-                gboolean success;
-                success = clutter_texture_set_from_file(CLUTTER_TEXTURE(gui.playback_texture_), image_full_path.c_str(), &error);
-                // TODO: validate this path
-                if (!success)
-                {
-                    std::cerr << "Failed to load pixbuf file: " << image_full_path << " " << error->message << std::endl;
-                    g_error_free(error);
-                } else {
-                    // TODO:2010-08-06:aalex:Do not load an image twice in a row
-                    //std::cout << "Loaded image " <<  image_full_path << std::endl;
-                    //buf = (char*) gdk_pixbuf_get_pixels(pixbuf);
-                    //pixels_are_loaded = true;
-                    //loaded_pixbuf = true;
-                }
-            }
-        }
-        prev_image_number = image_number;
-    } 
-}
-
-/** 
- * Timeline handler.
- * Called on every frame. 
- */
-void on_new_frame(ClutterTimeline *timeline, gint msecs, gpointer data)
-{
-    //std::cout << "on_new_frame" << std::endl; 
-//     Gui *gui = (Gui*)data;
-    iterate_playhead();
 }
 
 /**
  * Called when the stage size has changed.
+ *
+ * Calls Gui::resize_actors
  */
-void on_stage_allocation_changed(ClutterActor *stage, ClutterActorBox *box, ClutterAllocationFlags *flags, gpointer user_data) {
+void on_stage_allocation_changed(ClutterActor * /*stage*/, 
+        ClutterActorBox * /*box*/, 
+        ClutterAllocationFlags * /*flags*/, 
+        gpointer user_data) 
+{
     //g_print("on_stage_allocation_changed\n");
     Gui *gui = static_cast<Gui*>(user_data);
     gui->resize_actors();
@@ -333,25 +313,38 @@ void Gui::resize_actors() {
         set_x = (stage_width - set_width) / 2;
         set_y = 0;
     }
-    // Now that we know the ratio of stuff, 
-    // Set the live texture size and position:
-    gfloat live_tex_width = set_width / 2;
-    gfloat live_tex_height = set_height / 2;
-    gfloat live_tex_x = set_x;
-    gfloat live_tex_y = (stage_height / 4);
-    clutter_actor_set_position(CLUTTER_ACTOR(live_input_texture_), live_tex_x, live_tex_y);
-    clutter_actor_set_size(CLUTTER_ACTOR(live_input_texture_), live_tex_width, live_tex_height);
+    if (current_layout_ == LAYOUT_SPLITSCREEN)
+    {
+        // Now that we know the ratio of stuff, 
+        // Set the live texture size and position:
+        gfloat live_tex_width = set_width / 2;
+        gfloat live_tex_height = set_height / 2;
+        gfloat live_tex_x = set_x;
+        gfloat live_tex_y = (stage_height / 4);
+        clutter_actor_set_position(CLUTTER_ACTOR(live_input_texture_), live_tex_x, live_tex_y);
+        clutter_actor_set_size(CLUTTER_ACTOR(live_input_texture_), live_tex_width, live_tex_height);
 
-    // Set the playback texture size and position:
-    gfloat playback_tex_width = set_width / 2;
-    gfloat playback_tex_height = set_height / 2;
-    gfloat playback_tex_x = (stage_width / 2);
-    gfloat playback_tex_y = (stage_height / 4);
-    clutter_actor_set_position(CLUTTER_ACTOR(playback_texture_), playback_tex_x, playback_tex_y);
-    clutter_actor_set_size(CLUTTER_ACTOR(playback_texture_), playback_tex_width, playback_tex_height);
+        // Set the playback texture size and position:
+        gfloat playback_tex_width = set_width / 2;
+        gfloat playback_tex_height = set_height / 2;
+        gfloat playback_tex_x = (stage_width / 2);
+        gfloat playback_tex_y = (stage_height / 4);
+        clutter_actor_set_position(CLUTTER_ACTOR(playback_texture_), playback_tex_x, playback_tex_y);
+        clutter_actor_set_size(CLUTTER_ACTOR(playback_texture_), playback_tex_width, playback_tex_height);
+    } else if (current_layout_ == LAYOUT_PLAYBACK_ONLY) {
+
+        clutter_actor_set_position(CLUTTER_ACTOR(playback_texture_), set_x, set_y);
+        clutter_actor_set_size(CLUTTER_ACTOR(playback_texture_), set_width, set_height);
+    } else {
+        std::cout << "Invlalid layout" << std::endl; // should not occur...
+    }
 }
 /**
  * Called when the size of the input image has changed.
+ *
+ * Useful to update the layout. Calls Gui::resize_actors.
+ *
+ * Makes the live input texture visible. 
  */
 void on_live_input_texture_size_changed(ClutterTexture *texture, gfloat width, gfloat height, gpointer user_data) {
     //g_print("on_live_input_texture_size_changed\n");
@@ -364,10 +357,42 @@ void on_live_input_texture_size_changed(ClutterTexture *texture, gfloat width, g
     stage = clutter_actor_get_stage(CLUTTER_ACTOR(texture));
     if (stage == NULL)
         return;
+
+    clutter_actor_show_all(CLUTTER_ACTOR(gui->live_input_texture_));
     gui->resize_actors();
 }
 
-void on_playback_texture_size_changed(ClutterTexture *texture, gfloat width, gfloat height, gpointer user_data) {
+/**
+ * Toggles the layout
+ */
+void Gui::toggle_layout()
+{
+    current_layout_ == LAYOUT_PLAYBACK_ONLY ? set_layout(LAYOUT_SPLITSCREEN) : set_layout(LAYOUT_PLAYBACK_ONLY);
+}
+/**
+ * Sets the current layout.
+ * Also makes some actors visible or not.
+ */
+void Gui::set_layout(layout_number layout)
+{
+    current_layout_ = layout; 
+    if (current_layout_ == LAYOUT_PLAYBACK_ONLY)
+    {
+        clutter_actor_hide_all(CLUTTER_ACTOR(live_input_texture_));
+    } else if (current_layout_ == LAYOUT_SPLITSCREEN) {
+        clutter_actor_show_all(CLUTTER_ACTOR(live_input_texture_));
+    }
+    resize_actors();
+}
+
+/**
+ * Called when the size of the image to play back has changed.
+ *
+ * Useful to update the layout. Calls Gui::resize_actors.
+ */
+void on_playback_texture_size_changed(ClutterTexture *texture, 
+        gfloat /*width*/, gfloat /*height*/, gpointer user_data) 
+{
     //g_print("on_playback_texture_size_changed\n");
     // TODO:2010-08-06:aalex:Take into account size and ratio of the playback texture
     Gui *gui = static_cast<Gui*>(user_data);
@@ -378,14 +403,22 @@ void on_playback_texture_size_changed(ClutterTexture *texture, gfloat width, gfl
     gui->resize_actors();
 }
 /**
+ * Graphical user interface for Toonloop. 
+ *
+ * Here we create the window and a Clutter stage with actors.
+ *
  * Exits the application if OpenGL needs are not met.
  */
-Gui::Gui() :
+Gui::Gui(Application* owner) :
     video_input_width_(1),
     video_input_height_(1),
-    isFullscreen_(false)
+    owner_(owner),
+    isFullscreen_(false),
+    current_layout_(LAYOUT_SPLITSCREEN)
 {
     //video_xwindow_id_ = 0;
+    owner_->get_controller()->next_image_to_play_signal_.connect(boost::bind(&Gui::on_next_image_to_play, this, _1, _2, _3));
+    //TODO: owner_->get_controller()->no_image_to_play_signals_.connect(boost::bind(&Gui::on_no_image_to_play, this))
     // Main GTK window
     window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     // TODO:2010-08-06:aalex:make window size configurable
@@ -408,7 +441,7 @@ Gui::Gui() :
 
     g_signal_connect(G_OBJECT(window_), "key-press-event", G_CALLBACK(key_press_event), this);
     // add listener for window-state-event to detect fullscreenness
-    g_signal_connect(G_OBJECT(window_), "window-state-event", G_CALLBACK(onWindowStateEvent), this);
+    g_signal_connect(G_OBJECT(window_), "window-state-event", G_CALLBACK(on_window_state_event), this);
 
     // vbox:
     vbox_ = gtk_vbox_new(FALSE, 0); // args: homogeneous, spacing
@@ -450,13 +483,15 @@ Gui::Gui() :
     timeline_ = clutter_timeline_new(6000);
     g_object_set(timeline_, "loop", TRUE, NULL);   /* have it loop */
     /* fire a callback for frame change */
-    g_signal_connect(timeline_, "new-frame", G_CALLBACK(on_new_frame), this);
+    g_signal_connect(timeline_, "new-frame", G_CALLBACK(on_render_frame), this);
     /* and start it */
     clutter_timeline_start(timeline_);
 
     /* of course, we need to show the texture in the stage. */
 
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(live_input_texture_));
+
+    clutter_actor_hide_all(CLUTTER_ACTOR(live_input_texture_));
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(playback_texture_));
   
     gtk_widget_show_all(window_);
@@ -467,10 +502,16 @@ Gui::Gui() :
      */
     clutter_actor_show_all(CLUTTER_ACTOR(live_input_texture_));
     //clutter_actor_show_all(CLUTTER_ACTOR(playback_texture_));
-    if (Application::get_instance().get_configuration().get_fullscreen())
+    if (owner_->get_configuration()->get_fullscreen())
         toggleFullscreen(window_);
 }
 
+/**
+ * Returns the live input image texture. 
+ *
+ * Called from the Pipeline in order to get the video sink element that allows
+ * use to view some GStreamer video on a Clutter actor.
+ */
 ClutterActor* Gui::get_live_input_texture()
 {
     return live_input_texture_;
