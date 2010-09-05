@@ -39,6 +39,86 @@
 namespace fs = boost::filesystem;
 
 /**
+ * Called every time there is a message on the GStreamer pipeline's bus.
+ *
+ * We are mostly interested in the new pixbug message.
+ * In that case, checks if the video recording or the intervalometer is enabled. 
+ * If so, grabs an image if it's time to do so.
+ */
+void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_data)
+{
+    Pipeline *context = static_cast<Pipeline*>(user_data);
+    switch (GST_MESSAGE_TYPE (msg)) {
+    case GST_MESSAGE_ELEMENT:
+    {
+        const GValue *val;
+        GdkPixbuf *pixbuf = NULL;
+  
+        /* only interested in element messages from our gdkpixbufsink */
+        if (msg->src != GST_OBJECT_CAST(context->gdkpixbufsink_))
+            break;
+  
+        /* only interested in these two messages */
+        if (!gst_structure_has_name(msg->structure, "preroll-pixbuf") &&
+                !gst_structure_has_name(msg->structure, "pixbuf")) 
+        {
+            break;
+        }
+  
+        //g_print("pixbuf\n");
+        val = gst_structure_get_value(msg->structure, "pixbuf");
+        g_return_if_fail(val != NULL);
+  
+        pixbuf = GDK_PIXBUF(g_value_dup_object(val));
+        if (context->get_record_all_frames() || context->get_intervalometer_is_on()) // if video grabbing is enabled
+        {
+            Clip *current_clip = context->owner_->get_current_clip();
+            long last_time_grabbed = current_clip->get_last_time_grabbed_image();
+            long now = timing::get_timestamp_now();
+            bool must_grab_now = false;
+            // VIDEO RECORDING:
+            if (context->get_record_all_frames())
+            {
+                long time_between_frames = long(1.0 / float(current_clip->get_playhead_fps()) * timing::TIMESTAMP_PRECISION);
+                if ((now - last_time_grabbed) > time_between_frames)
+                {
+                    must_grab_now = true;
+                }
+            } // not mutually exclusive - why not have both on?
+            // INTERVALOMETER:
+            if (context->get_intervalometer_is_on())
+            {
+                long time_between_intervalometer_ticks = long(current_clip->get_intervalometer_rate() * timing::TIMESTAMP_PRECISION);
+                if ((now - last_time_grabbed) > time_between_intervalometer_ticks)
+                {
+                    must_grab_now = true;
+                }
+            }
+            if (must_grab_now)
+            {
+                context->save_image_to_current_clip(pixbuf);
+                current_clip->set_last_time_grabbed_image(now);
+            }
+        }
+        g_object_unref(pixbuf);
+        break;
+    }
+    case GST_MESSAGE_ERROR:
+    {
+        GError *err = NULL;
+        gchar *dbg = NULL;
+        gst_message_parse_error(msg, &err, &dbg);
+        g_error("Error: %s\n%s\n", err->message, (dbg) ? dbg : "");
+        g_error_free(err);
+        g_free(dbg);
+        break;
+    }
+    default:
+        break;
+  }
+}
+
+/**
  * GST bus signal watch callback 
  */
 void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, GstElement* /*pipeline*/)
@@ -81,6 +161,11 @@ void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, GstElement* /
     }
 }
 
+void Pipeline::on_new_live_pixbuf(GstBus* /*bus*/, GstMessage* /*message*/, GstElement* /*pipeline*/)
+{
+    std::cout << "on_new_live_pixbuf" << std::endl;
+}
+
 /** 
  * Adds an image to the current clip.
  * TODO: should be moved out of here, to application. 
@@ -104,18 +189,30 @@ void Pipeline::remove_frame()
 void Pipeline::grab_frame()
 {
     GdkPixbuf* pixbuf;
-    Clip *thisclip = owner_->get_current_clip();
-    bool is_verbose = owner_->get_configuration()->get_verbose();
-    //thisclip->lock_mutex();
-    int current_clip_id = thisclip->get_id();
     g_object_get(G_OBJECT(gdkpixbufsink_), "last-pixbuf", &pixbuf, NULL);
     if (! GDK_IS_PIXBUF(pixbuf))
     {
         std::cout << "No picture yet to grab!" << std::endl;
         //thisclip->unlock_mutex();
-        return;
+    } else {
+        save_image_to_current_clip(pixbuf);
     }
-
+    g_object_unref(pixbuf);
+}
+/**
+ * Saves a GdkPixbuf image to the current clip.
+ *
+ * Needed, because the image might come from the last grabbed
+ * frame, or the recording of every frame might be automatic. (video)
+ *
+ * The gdkpixbufsink element posts messages containing the pixbuf.
+ */
+void Pipeline::save_image_to_current_clip(GdkPixbuf *pixbuf)
+{
+    Clip *thisclip = owner_->get_current_clip();
+    bool is_verbose = owner_->get_configuration()->get_verbose();
+    //thisclip->lock_mutex();
+    int current_clip_id = thisclip->get_id();
     int w = gdk_pixbuf_get_width(pixbuf);
     int h = gdk_pixbuf_get_height(pixbuf);
 
@@ -154,7 +251,6 @@ void Pipeline::grab_frame()
         if (is_verbose)
             g_print("Image %s saved\n", file_name.c_str());
     }
-    g_object_unref(pixbuf);
     //thisclip->unlock_mutex();
 }
 
@@ -177,9 +273,13 @@ void Pipeline::stop()
  * This pipeline grabs the video and render the OpenGL.
  */
 Pipeline::Pipeline(Application* owner) :
-        owner_(owner)
+        owner_(owner), 
+        record_all_frames_enabled_(false)
 {
     Configuration *config = owner_->get_configuration();
+
+    set_intervalometer_is_on(false);
+    
     //onionskin_texture_ = Texture();
     //playback_texture_ = Texture();
     pipeline_ = NULL;
@@ -255,7 +355,7 @@ Pipeline::Pipeline(Application* owner) :
     gst_bin_add(GST_BIN(pipeline_), gdkpixbufsink_);
 
     // link pads:
-    gboolean is_linked = NULL;
+    gboolean is_linked = FALSE; 
     bool source_is_linked = false;
     int frame_rate_index = 0;
     if (config->videoSource() == std::string("test") || config->videoSource() == std::string("x")) 
@@ -294,7 +394,7 @@ Pipeline::Pipeline(Application* owner) :
             is_linked = gst_element_link_pads(videosrc_, "src", capsfilter0, "sink");
             if (!is_linked) 
             { 
-                std::cout << "Failed to link video source. Trying an other framerate." << std::endl;
+                std::cout << "Failed to link video source. Trying another framerate." << std::endl;
                 ++frame_rate_index;
                 if (frame_rate_index >= 10) 
                 {
@@ -352,6 +452,7 @@ Pipeline::Pipeline(Application* owner) :
     g_signal_connect(bus, "message::error", G_CALLBACK(end_stream_cb), this);
     g_signal_connect(bus, "message::warning", G_CALLBACK(end_stream_cb), this);
     g_signal_connect(bus, "message::eos", G_CALLBACK(end_stream_cb), this);
+    g_signal_connect(bus, "message", G_CALLBACK(bus_message_cb), this);
     gst_object_unref(bus);
 
     // TODO:2010-08-06:aalex:We could rely on gstremer-properties to configure the video source.
@@ -450,5 +551,15 @@ std::string Pipeline::guess_source_caps(unsigned int framerateIndex) const
         THROW_ERROR("Could not change v4l2src state to NULL");
 
     return capsStr.str();
+}
+
+void Pipeline::set_record_all_frames(bool enable)
+{
+    record_all_frames_enabled_ = enable;
+}
+
+void Pipeline::set_intervalometer_is_on(bool enable)
+{
+    intervalometer_is_on_ = enable;
 }
 

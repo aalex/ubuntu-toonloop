@@ -21,7 +21,6 @@
 #include <iostream>
 #include <cstdlib>
 #include <stk/RtMidi.h>
-#include <boost/signals2.hpp>
 #include "application.h"
 #include "configuration.h"
 #include "controller.h"
@@ -32,6 +31,15 @@
  * MIDI controller 64 is the sustain pedal controller. It looks like this:
  *   <channel and status> <controller> <value>
  * Where the controller number is 64 and the value is either 0 or 127.
+ *
+ * The MIDI controller 80 is also a pedal on the Roland GFC-50.
+ * It controls video grabbing.
+ *
+ * The program change should allow the user to choose another instrument. 
+ * This way, the Roland GFC-50 allows to select any of ten clips.
+ * The MIDI spec allows for 128 programs, numbered 0-127.
+ *
+ * Main volume is control 7. It controls the playback speed.
  */
 void MidiInput::input_message_cb(double delta_time, std::vector< unsigned char > *message, void *user_data )
 {
@@ -48,15 +56,27 @@ void MidiInput::input_message_cb(double delta_time, std::vector< unsigned char >
     }
     if (message->size() >= 3)
     {
-        if ((int)message->at(1) == 64)
+        if ((int)message->at(1) == 64) // 64: sustain pedal
+        {
             if ((int)message->at(2) == 127) 
-            {
-                if (context->verbose_)
-                    std::cout << "Sustain pedal is down."  << std::endl;
                 context->on_pedal_down();
-                context->pedal_down_signal_();
-            }
-            // we might want pedal up signal too (0)
+        }
+        else if ((int)message->at(1) == 80) // 80: general-purpose control. The Roland GFC-50 provides an on/off pedal input with that number
+        {
+            if ((int)message->at(2) == 127) 
+                context->on_ctrl_80_changed(true);
+            else
+                context->on_ctrl_80_changed(false);
+        } 
+        else if ((int)message->at(1) == 7) // 7: volume expression pedal
+            context->on_volume_control((int)message->at(2));
+    }
+    else if (message->size() >= 2)
+    {
+        if (((int)message->at(0) & 192) == 192)
+        {
+            context->on_program_change((int)message->at(1));
+        }
     }
 }
 
@@ -81,8 +101,23 @@ bool MidiInput::is_open() const
 {
     return opened_;
 }
+/** Called when the main volume pedal value is changed.
+ *
+ * Volume is from 0 to 127.
+ *
+ * The volume control in MIDI is number 7.
+ */
+void MidiInput::on_volume_control(int volume)
+{
+    if (owner_->get_configuration()->get_verbose())
+        std::cout << "on_volume_control" << volume << std::endl;
+    unsigned int fps = volume / 4;
+    owner_->get_controller()->set_playhead_fps(fps);
+}
 
 /** Called when a sustain MIDI pedal goes down.
+ *
+ * Sustain pedal is control 64.
  */
 void MidiInput::on_pedal_down()
 {
@@ -90,11 +125,31 @@ void MidiInput::on_pedal_down()
         std::cout << "on_pedal_down" << std::endl;
     owner_->get_controller()->add_frame();
 }
+/** Called when a control #80's value changes.
+ */
+void MidiInput::on_ctrl_80_changed(bool is_on)
+{
+    if (owner_->get_configuration()->get_verbose())
+        std::cout << "control #80's value changed:" << is_on << std::endl;
+    owner_->get_controller()->enable_video_grabbing(is_on);
+}
+/** Called when the user sends a program change message
+ */
+void MidiInput::on_program_change(int number)
+{
+    if (number >= 10)
+        std::cout << "Cannot choose a clip greater or equal to 10." << std::endl; 
+    else
+    {
+        owner_->get_controller()->choose_clip(number);
+    }
+}
 
 MidiInput::MidiInput(Application* owner) : 
         owner_(owner)
 {
     verbose_ = false;
+    //verbose_ = true;
     midi_in_ = 0;
     // RtMidiIn constructor
     try {

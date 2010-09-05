@@ -93,8 +93,16 @@ void Gui::showCursor()
  * 0, 1, 2, 3, 4, 5, 6, 7, 8, 9: choose a clip
  * Ctrl-q: quit
  * Ctrl-s: save
- * period: toggles the layout
+ * minus: toggle the layout
  * Tab: changes the playback direction
+ * Caps_Lock: Toggle video grabbing on/off
+ * a: Toggles on/off the intervalometer
+ * k: increase intervalometer interval by 1 second
+ * j: decrease intervalometer interval by 1 second
+ * period: move writehead to the next image
+ * comma: move writehead to the previous image
+ * slash: move writehead to the last image
+ * semicolon: move writehead to the first image
  */
 
 gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
@@ -103,18 +111,34 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
 
     switch (event->keyval)
     {
+        case GDK_Caps_Lock:
+        {
+            if ((event->state & GDK_LOCK_MASK) != 0)
+            {
+                std::cout << "Caps_Lock off" << std::endl;
+                context->owner_->get_controller()->toggle_video_grabbing();
+            } else {
+                std::cout << "Caps_Lock on" << std::endl;
+                context->owner_->get_controller()->toggle_video_grabbing();
+            }
+            break;
+        }
         case GDK_Up:
             context->owner_->get_controller()->increase_playhead_fps();
             break;
         case GDK_Down:
             context->owner_->get_controller()->decrease_playhead_fps();
             break;
-        //case GDK_Left:
-        //case GDK_Right:
+        case GDK_Left:
+            context->owner_->get_controller()->set_current_clip_direction(DIRECTION_BACKWARD);
+            break;
+        case GDK_Right:
+            context->owner_->get_controller()->set_current_clip_direction(DIRECTION_FORWARD);
+            break;
         case GDK_Tab:
             context->owner_->get_controller()->change_current_clip_direction();
             break;
-        case GDK_period:
+        case GDK_minus:
             //TODO:2010-08-27:aalex:Create Controller:toggle_layout
             context->toggle_layout();
             break;
@@ -174,6 +198,28 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
                 g_print("Ctrl-S key pressed, saving.\n");
                 context->owner_->get_controller()->save_current_clip();
             }
+            break;
+        case GDK_a:
+            //std::cout << "Toggle intervalometer." << std::endl; 
+            context->owner_->get_controller()->toggle_intervalometer();
+            break;
+        case GDK_k:
+            context->owner_->get_controller()->increase_intervalometer_rate();
+            break;
+        case GDK_j:
+            context->owner_->get_controller()->decrease_intervalometer_rate();
+            break;
+        case GDK_comma:
+            context->owner_->get_controller()->move_writehead_to_previous();
+            break;
+        case GDK_period:
+            context->owner_->get_controller()->move_writehead_to_next();
+            break;
+        case GDK_slash:
+            context->owner_->get_controller()->move_writehead_to_last();
+            break;
+        case GDK_semicolon:
+            context->owner_->get_controller()->move_writehead_to_first();
             break;
         default:
             break;
@@ -346,7 +392,8 @@ void Gui::resize_actors() {
  *
  * Makes the live input texture visible. 
  */
-void on_live_input_texture_size_changed(ClutterTexture *texture, gfloat width, gfloat height, gpointer user_data) {
+void Gui::on_live_input_texture_size_changed(ClutterTexture *texture, gfloat width, gfloat height, gpointer user_data) 
+{
     //g_print("on_live_input_texture_size_changed\n");
     Gui *gui = static_cast<Gui*>(user_data);
     gui->video_input_width_ = (float) width;
@@ -424,7 +471,7 @@ Gui::Gui(Application* owner) :
     // TODO:2010-08-06:aalex:make window size configurable
     gtk_widget_set_size_request(window_, WINWIDTH, WINHEIGHT); 
     gtk_window_move(GTK_WINDOW(window_), 300, 10); // TODO: make configurable
-    gtk_window_set_title(GTK_WINDOW(window_), std::string(std::string("Toonloop ") + std::string(PACKAGE_VERSION)).c_str());
+    gtk_window_set_title(GTK_WINDOW(window_), "Toonloop " PACKAGE_VERSION);
     // Set window icon
     fs::path iconPath(std::string(PIXMAPS_DIR) + "/toonloop.png");
     if (fs::exists(iconPath))
@@ -512,7 +559,7 @@ Gui::Gui(Application* owner) :
  * Called from the Pipeline in order to get the video sink element that allows
  * use to view some GStreamer video on a Clutter actor.
  */
-ClutterActor* Gui::get_live_input_texture()
+ClutterActor* Gui::get_live_input_texture() const
 {
     return live_input_texture_;
 }
