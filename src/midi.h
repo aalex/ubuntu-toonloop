@@ -23,10 +23,8 @@
 #ifndef _MIDI_H_
 #define _MIDI_H_
 
-#include <boost/signals2.hpp>
-#include <stk/RtMidi.h>
-
 class Application;
+class RtMidiIn;
 
 /** MIDI input using RtMidi allowing a pedal to control frame grabbing.
  */
@@ -39,12 +37,15 @@ class MidiInput
         void enumerate_devices() const;
         static void input_message_cb(double delta_time, std::vector<unsigned char> *message, void *user_data);
         bool is_open() const;
-        boost::signals2::signal<void ()> pedal_down_signal_;
+        //boost::signals2::signal<void ()> pedal_down_signal_;
         bool verbose_;
         void set_verbose(bool verbose);
     private:
         Application *owner_;
         void on_pedal_down();
+        void on_ctrl_80_changed(bool is_on);
+        void on_program_change(int number);
+        void on_volume_control(int volume);
         unsigned int port_;
         unsigned int ports_count_;
         RtMidiIn *midi_in_;

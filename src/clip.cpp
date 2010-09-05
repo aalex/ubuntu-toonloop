@@ -43,7 +43,19 @@ Clip::Clip(unsigned int id)
     has_recorded_a_frame_ = false;
     direction_ = DIRECTION_FORWARD;
     yoyo_sub_direction_ = DIRECTION_FORWARD;
+    last_time_grabbed_image_ = 0L;
+    intervalometer_rate_ = 10.0f; // 10 seconds is a reasonable default for a timelapse
     //mutex_;
+}
+
+void Clip::set_intervalometer_rate(const float rate)
+{
+    intervalometer_rate_ = rate;
+}
+
+void Clip::set_last_time_grabbed_image(const long timestamp)
+{
+    last_time_grabbed_image_ = timestamp;
 }
 
 void Clip::set_directory_path(const std::string &directory_path)
@@ -67,6 +79,8 @@ unsigned int Clip::get_playhead_fps() const
 
 void Clip::set_playhead_fps(unsigned int fps)
 {
+    if (fps > MAX_FPS)
+        fps = MAX_FPS;
     playhead_fps_ = fps;
 }
 
@@ -94,14 +108,23 @@ void Clip::set_height(unsigned int height)
 {
     height_ = height;
 }
+// TODO:2010-09-02:aalex:Maybe Clip::frame_add should take the image file name as argument.
 /**
  * Adds an image to the clip.
  * Returns the its index.
  */
 unsigned int Clip::frame_add()
 {
-    using namespace std::tr1; // shared_ptr
-
+    using std::tr1::shared_ptr;
+    if (writehead_ > size())
+    {
+        // Should not occur
+        std::cout << "ERROR: The writehead points to a " <<
+            "non-existing frame index " << writehead_ << " while the clip has only " << 
+            images_.size() << " images." << std::endl;
+        writehead_ = size();
+        std::cout << "Set the writehead position to " << writehead_ << std::endl;
+    }
     unsigned int assigned = writehead_;
     std::string name = timing::get_iso_datetime_for_now();
     //images_.push_back(shared_ptr<Image>(new Image(name)));
@@ -110,6 +133,18 @@ unsigned int Clip::frame_add()
     writehead_++;
     return assigned;
 }
+
+/**
+ * Sets the write head position
+ */
+void Clip::set_writehead(unsigned int new_value)
+{
+    if (new_value > size())
+        writehead_ = size();
+    else
+        writehead_ = new_value;
+}
+
 
 /**
  * Delete an image for the clip.
@@ -127,19 +162,21 @@ unsigned int Clip::frame_remove()
     {
         clear_all_images(); // takes care of writehead_ and playhead_
     }
-    else if (writehead_ > images_.size()) 
-    {
-        std::cout << "Cannot delete a frame since the writehead points to a " <<
-            "non-existing frame index " << writehead_ << " while the clip has only " << 
-        images_.size() << " images." << std::endl;
-        //TODO:2010-08-27:aalex:Move the writehead to the end of clip and erase a frame anyways.
-    } 
     else if (writehead_ == 0)
     {
         std::cout << "Cannot delete a frame since writehead is at 0" << std::endl;
     }
     else 
     {
+        if (writehead_ > images_.size()) 
+        {
+            std::cout << "ERROR: The writehead points to a " <<
+                "non-existing frame index " << writehead_ << " while the clip has only " << 
+                images_.size() << " images." << std::endl;
+            //Move the writehead to the end of clip and erase a frame anyways.
+            writehead_ = size();
+            std::cout << "Set the writehead position to " << writehead_ << std::endl;
+        } 
         std::cout << "Deleting image at position " << (writehead_ - 1) << "/" << (images_.size()  - 1) << std::endl;
         images_.erase(images_.begin() + (writehead_ - 1));
         how_many_deleted = 1;
@@ -177,40 +214,43 @@ unsigned int Clip::iterate_playhead()
         // clip has at leat 1 of length
         switch (direction_)
         {
-        case DIRECTION_FORWARD:
-            if (playhead_ >= len - 1)
-                playhead_ = 0;
-            else 
-                ++playhead_;
-            break;
-        case DIRECTION_BACKWARD:
-            if (playhead_ == 0)
-                playhead_ = len - 1;
-            else 
-                --playhead_;
-            break;
-        // a slightly more complex type is the yoyo:
-        case DIRECTION_YOYO:
-            if (yoyo_sub_direction_ == DIRECTION_BACKWARD)
-            {
-                if (playhead_ == 0)
-                {
-                    playhead_ = 1;
-                    yoyo_sub_direction_ = DIRECTION_FORWARD;
-                } else 
-                    --playhead_;
-            } else {
+            case DIRECTION_FORWARD:
                 if (playhead_ >= len - 1)
-                {
-                    if (len == 1)
-                        playhead_ = 0;
-                    else
-                        playhead_ = len - 2;
-                    yoyo_sub_direction_ = DIRECTION_BACKWARD;
-                } else 
+                    playhead_ = 0;
+                else 
                     ++playhead_;
-            }
-            break;
+                break;
+            case DIRECTION_BACKWARD:
+                if (playhead_ == 0)
+                    playhead_ = len - 1;
+                else 
+                    --playhead_;
+                break;
+                // a slightly more complex type is the yoyo:
+            case DIRECTION_YOYO:
+                if (yoyo_sub_direction_ == DIRECTION_BACKWARD)
+                {
+                    if (playhead_ == 0)
+                    {
+                        playhead_ = 1;
+                        yoyo_sub_direction_ = DIRECTION_FORWARD;
+                    } else 
+                        --playhead_;
+                } 
+                else 
+                {
+                    if (playhead_ >= len - 1)
+                    {
+                        if (len == 1)
+                            playhead_ = 0;
+                        else
+                            playhead_ = len - 2;
+                        yoyo_sub_direction_ = DIRECTION_BACKWARD;
+                    } 
+                    else 
+                        ++playhead_;
+                }
+                break;
         } // switch
     } // else
     return playhead_;
@@ -218,8 +258,7 @@ unsigned int Clip::iterate_playhead()
 
 unsigned int Clip::size() const
 {
-    int ret = static_cast<unsigned int>(images_.size());
-    return ret;
+    return images_.size();
 }
 
 /**
