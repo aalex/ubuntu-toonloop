@@ -1,8 +1,9 @@
- _____              _               
-|_   _|__  ___ _ _ | |___  ___ _ __ 
-  | |/ _ \/ _ \ ' \| / _ \/ _ \ '_ \
-  |_|\___/\___/_||_|_\___/\___/ .__/
-                              |_|  
+ _____                 _                   
+|_   _|__   ___  _ __ | | ___   ___  _ __  
+  | |/ _ \ / _ \| '_ \| |/ _ \ / _ \| '_ \ 
+  | | (_) | (_) | | | | | (_) | (_) | |_) |
+  |_|\___/ \___/|_| |_|_|\___/ \___/| .__/ 
+                                    |_|    
 
 This is Toonloop version 1.9.x. It is a complete rewrite of the application in 
 C++ with Gstreamer. It is still in an alpha stage. 
@@ -109,17 +110,17 @@ ctrl-q             : quit
 Page down          : next clip
 Page up            : previous clip
 Number from 0 to 9 : switch to a specific clip
-Ctrl-s             : saves the current clip as a movie file
+s                  : saves the current clip as a movie file
 Tab                : changes the playback direction
 r                  : clear the current clip
 Caps Lock          : toggle video grabbing
 a                  : Toggles on/off the intervalometer
 k                  : increase intervalometer interval by 1 second
 j                  : decrease intervalometer interval by 1 second
-minus              : Toggles the layout
-period             : move writehead to the next image
-comma              : move writehead to the previous image
-slash              : move writehead to the last image
+period             : Toggles the layout
+right              : move writehead to the next image
+left               : move writehead to the previous image
+return             : move writehead to the last image
 semicolon          : move writehead to the first image
 
 Toonloop saves the clip in its project directory. The default project directory is the ~/Documents/toonloop/default/ directory, where "~" is your HOME directory. 
@@ -147,5 +148,5 @@ You might need to properly configure your V4L2 video device::
 If you use two displays, you might want to use 2 separate X screens::
 
   sudo nvidia-settings
-  DISPLAY=:0.1 ./toonloop.py
+  DISPLAY=:0.1 toonloop --fullscreen
 

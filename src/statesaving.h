@@ -18,24 +18,16 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef __SAVERWORKER_H__
-#define __SAVERWORKER_H__
-
-// forward declarations
-class MovieSaver;
-
-/** Takes care of saving a movie in a thread.
- */
-class SaverWorker
+namespace statesaving
 {
-    public:
-        SaverWorker(MovieSaver *owner);
-        void operator()();
-        bool success_;
-    private:
-        MovieSaver *owner_;
+    const char *ROOT_NODE = "project";
+    const char *PROJECT_NAME_PROPERTY = "name";
+    const char *FILE_NAME = "project.xml";
+    const char *CLIPS_NODE = "clips";
+    const char *CLIP_NODE = "clip";
+    const char *CLIP_ID_PROPERTY = "id";
+    const char *IMAGES_NODE = "images";
+    const char *IMAGE_NODE = "image";
+    void write_project_file();
 };
-
-#endif
 

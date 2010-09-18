@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 1.9.4, support@toonloop.com)
+AC_INIT(TOONLOOP, 1.9.5, support@toonloop.com)
 AC_DEFINE([PACKAGE_URL],["http://www.toonloop.com"])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
@@ -96,10 +96,7 @@ fi
 AC_SUBST([CLUTTERGST_LIBS])
 AC_SUBST([CLUTTERGST_CFLAGS])
 
-# libxml++-1.0
-#PKG_CHECK_MODULES([XMLPLUSPLUS], [libxml++-2.6 >= 2.10.0])
-#AC_SUBST([XMLPLUSPLUS_LIBS])
-#AC_SUBST([XMLPLUSPLUS_CFLAGS])
+# TODO: maybe check explicitely for libxml2
 
 # BOOST
 AX_BOOST_BASE([1.35])
