@@ -1,24 +1,22 @@
-2010-09-05: Toonloop 1.9.4
+2010-09-18: Toonloop 1.9.5
 --------------------------
 
 This release is an unstable version in the 1.9 series. This version contains new features preparing the 2.0 stable series. 
 
-Warning: some key strokes to control Toonloop have changed since the 1.9.3 release. See the README, the man page, or the Doxygen-generated documentation about the Gui class for the new keys to controls Toonloop.
-
 New features:
-    * Video grabbing (can record every incoming frame in a row, at playback FPS)
-    * MIDI control 80 controls video grabbing
-    * MIDI program change chooses the current clip
-    * MIDI volume control (7) changes the playback speed
-    * Intervalometer
-    * Left:      Play backward
-    * Right:     Play forward
+    * layouts: Create a single-image layout, combining the two image with the overlay blending mode.
+    * gui: Press 'i' to print current loop frame number, number of frames in loop and global framerate.
+    * onion skinning: Press 'o' to toggle the onion skinning on/off.
+    * caps lock: Allow to capture video at the camera's FPS. (not the clip's playhead only)
+    * fade each image into the next.
+    * added the --enable-mouse-controls option
+    * left right: previous/next image to write
+    * enter: last image to write
+    * period: change layout
+    * support fade in that is longer than a frame duration
 
 Bug fixes: 
-    * avoid casting NULL to gboolean
-    * use g_get_tmp_dir instead of "/tmp"
-    * gui: simplify string handling for window-title assignment
-    * more private data, fewer public functions
-    * pass more string as a const reference, not by value
-    * removed some redundant include statements
+    * removed some useless includes
+    * simplified some string usage
+    * Fixed bug with semi-transparent live input when in splitscreen layout
 

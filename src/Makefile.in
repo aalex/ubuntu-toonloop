@@ -64,10 +64,11 @@ am_toonloop_OBJECTS = toonloop-application.$(OBJEXT) \
 	toonloop-image.$(OBJEXT) toonloop-main.$(OBJEXT) \
 	toonloop-midi.$(OBJEXT) toonloop-moviesaver.$(OBJEXT) \
 	toonloop-pipeline.$(OBJEXT) toonloop-saverworker.$(OBJEXT) \
-	toonloop-subprocess.$(OBJEXT) toonloop-timer.$(OBJEXT) \
-	toonloop-timing.$(OBJEXT) toonloop-v4l2util.$(OBJEXT) \
-	toonloop-oscinterface.$(OBJEXT) toonloop-oscreceiver.$(OBJEXT) \
-	toonloop-oscsender.$(OBJEXT) $(am__objects_1)
+	toonloop-statesaving.$(OBJEXT) toonloop-subprocess.$(OBJEXT) \
+	toonloop-timer.$(OBJEXT) toonloop-timing.$(OBJEXT) \
+	toonloop-v4l2util.$(OBJEXT) toonloop-oscinterface.$(OBJEXT) \
+	toonloop-oscreceiver.$(OBJEXT) toonloop-oscsender.$(OBJEXT) \
+	$(am__objects_1)
 toonloop_OBJECTS = $(am_toonloop_OBJECTS)
 am__DEPENDENCIES_1 =
 toonloop_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -270,6 +271,7 @@ headers = \
     oscsender.h \
 	pipeline.h \
 	saverworker.h \
+	statesaving.h \
 	subprocess.h \
 	timer.h \
 	timing.h \
@@ -288,6 +290,7 @@ toonloop_SOURCES = \
 	moviesaver.cpp \
 	pipeline.cpp \
 	saverworker.cpp \
+	statesaving.cpp \
 	subprocess.cpp \
 	timer.cpp \
 	timing.cpp \
@@ -444,6 +447,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-oscsender.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-pipeline.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-saverworker.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-statesaving.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-timer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-timing.Po@am__quote@
@@ -623,6 +627,20 @@ toonloop-saverworker.obj: saverworker.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='saverworker.cpp' object='toonloop-saverworker.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-saverworker.obj `if test -f 'saverworker.cpp'; then $(CYGPATH_W) 'saverworker.cpp'; else $(CYGPATH_W) '$(srcdir)/saverworker.cpp'; fi`
+
+toonloop-statesaving.o: statesaving.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-statesaving.o -MD -MP -MF $(DEPDIR)/toonloop-statesaving.Tpo -c -o toonloop-statesaving.o `test -f 'statesaving.cpp' || echo '$(srcdir)/'`statesaving.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-statesaving.Tpo $(DEPDIR)/toonloop-statesaving.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='statesaving.cpp' object='toonloop-statesaving.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-statesaving.o `test -f 'statesaving.cpp' || echo '$(srcdir)/'`statesaving.cpp
+
+toonloop-statesaving.obj: statesaving.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-statesaving.obj -MD -MP -MF $(DEPDIR)/toonloop-statesaving.Tpo -c -o toonloop-statesaving.obj `if test -f 'statesaving.cpp'; then $(CYGPATH_W) 'statesaving.cpp'; else $(CYGPATH_W) '$(srcdir)/statesaving.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-statesaving.Tpo $(DEPDIR)/toonloop-statesaving.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='statesaving.cpp' object='toonloop-statesaving.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-statesaving.obj `if test -f 'statesaving.cpp'; then $(CYGPATH_W) 'statesaving.cpp'; else $(CYGPATH_W) '$(srcdir)/statesaving.cpp'; fi`
 
 toonloop-subprocess.o: subprocess.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-subprocess.o -MD -MP -MF $(DEPDIR)/toonloop-subprocess.Tpo -c -o toonloop-subprocess.o `test -f 'subprocess.cpp' || echo '$(srcdir)/'`subprocess.cpp

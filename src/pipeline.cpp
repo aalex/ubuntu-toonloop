@@ -30,6 +30,7 @@
 #include "application.h"
 #include "clip.h"
 #include "configuration.h"
+#include "controller.h"
 #include "gui.h"
 #include "log.h" // TODO: make it async and implement THROW_ERROR
 #include "pipeline.h"
@@ -79,7 +80,9 @@ void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_d
             // VIDEO RECORDING:
             if (context->get_record_all_frames())
             {
+                std::cout << "Video grabbing is on." << std::endl; 
                 long time_between_frames = long(1.0 / float(current_clip->get_playhead_fps()) * timing::TIMESTAMP_PRECISION);
+                std::cout << "now=" << now << " last_time_grabbed=" << last_time_grabbed << " time_between_frames" << time_between_frames << std::endl;
                 if ((now - last_time_grabbed) > time_between_frames)
                 {
                     must_grab_now = true;
@@ -96,6 +99,7 @@ void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_d
             }
             if (must_grab_now)
             {
+                std::cout << "Grabbing an image" << std::endl;
                 context->save_image_to_current_clip(pixbuf);
                 current_clip->set_last_time_grabbed_image(now);
             }
@@ -250,6 +254,7 @@ void Pipeline::save_image_to_current_clip(GdkPixbuf *pixbuf)
     } else {
         if (is_verbose)
             g_print("Image %s saved\n", file_name.c_str());
+        owner_->get_controller()->add_frame_signal_(current_clip_id, new_image_number);
     }
     //thisclip->unlock_mutex();
 }
@@ -456,9 +461,9 @@ Pipeline::Pipeline(Application* owner) :
     gst_object_unref(bus);
 
     // TODO:2010-08-06:aalex:We could rely on gstremer-properties to configure the video source.
-    if (config->videoSource() != std::string("test") && config->videoSource() != std::string("x"))
+    if (config->videoSource() != "test" and config->videoSource() != "x")
     {
-        std::string device_name = config->videoSource(); // "/dev/video0";
+        std::string device_name(config->videoSource()); // "/dev/video0";
         g_print("Using camera %s.\n", device_name.c_str());
         g_object_set(videosrc_, "device", device_name.c_str(), NULL); 
     }
