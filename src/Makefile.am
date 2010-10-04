@@ -8,16 +8,19 @@ clean-local:
 	rm -rf html
 
 # noinst_PROGRAMS = 
+# FIXME: We should not add all the .h files here
 
 headers = \
 	application.h \
 	clip.h \
+	concurrentqueue.h \
 	config.h \
 	configuration.h \
 	controller.h \
 	gui.h \
 	image.h \
 	log.h \
+	message.h \
 	midi.h \
 	moviesaver.h \
     oscinterface.h \
