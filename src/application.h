@@ -36,6 +36,8 @@ class Pipeline;
 
 // FIXME:2010-08-17:aalex:We should allow more than 10 clips
 static const unsigned int MAX_CLIPS = 10;
+static const int DEFAULT_CAPTURE_WIDTH = 640;
+static const int DEFAULT_CAPTURE_HEIGHT = 480;
 
 /** The Application class: starts Toonloop.
  */
@@ -63,6 +65,8 @@ class Application
         unsigned int get_current_clip_number();
         /** Should be only called directly by Controller::choose_clip */
         void set_current_clip_number(unsigned int clipnumber);
+        /** Checks for asynchronous messages and treat them */
+        void check_for_messages();
 
     private:
         void update_project_home_for_each_clip();
