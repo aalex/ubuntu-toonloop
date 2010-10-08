@@ -22,7 +22,6 @@
 #ifndef __CLIP_H__
 #define __CLIP_H__
 
-// #include <boost/thread/mutex.hpp>
 #include <iostream>
 #include <map>
 #include <string>
@@ -67,8 +66,6 @@ class Clip
         void set_playhead_fps(unsigned int fps);
         void increase_playhead_fps();
         void decrease_playhead_fps();
-        //void lock_mutex();
-        //void unlock_mutex();
         void set_has_recorded_frame();
         bool get_has_recorded_frame() const;
         void set_directory_path(const std::string &directory_path);
@@ -81,6 +78,9 @@ class Clip
         /** The intervalometer speed is in seconds */
         float get_intervalometer_rate() const { return intervalometer_rate_; }
         void set_intervalometer_rate(const float rate);
+        bool remove_last_image();
+        bool remove_first_image();
+        void set_remove_deleted_images(bool enabled);
     private:
         unsigned int id_;
         unsigned int playhead_;
@@ -100,7 +100,6 @@ class Clip
         std::vector< std::tr1::shared_ptr<Image> > images_;
         unsigned int playhead_fps_;
         bool has_recorded_a_frame_;
-        //boost::mutex mutex_;
         std::string directory_path_;
         std::string file_extension_;
         /** Used to store time stamp of when grabbed last image.
@@ -108,6 +107,9 @@ class Clip
          * Useful for either the intervalometer, or the video grabbing.
          */
         long last_time_grabbed_image_;
+        void make_sure_playhead_and_writehead_are_valid();
+        bool remove_deleted_images_;
+        void remove_image_file(unsigned int index);
 };
 
 #endif // __CLIP_H__

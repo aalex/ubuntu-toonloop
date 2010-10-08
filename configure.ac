@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 1.9.6, support@toonloop.com)
+AC_INIT(TOONLOOP, 2.0.0, support@toonloop.com)
 AC_DEFINE([PACKAGE_URL],["http://www.toonloop.com"])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
@@ -26,11 +26,6 @@ AC_CHECK_FUNCS([inet_ntoa memset socket])
 
 AC_CHECK_LIB([pthread],[pthread_exit],[AC_SUBST([LIBTHREAD_CXXFLAGS],["-lpthread"])])
 AC_CHECK_LIB([m],[sin],[AC_SUBST([LIBM_CXXFLAGS],["-lm"])])
-
-# OpenGL
-# AX_CHECK_GL
-# AX_CHECK_GLU
-# AC_CHECK_LIB([GLEW], [glewInit],[AC_SUBST([GLEW_LIBS],["-lGLEW"])])
 
 # STK
 # TODO: print some message when configuring STK is OK

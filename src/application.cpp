@@ -31,6 +31,7 @@
 
 #include "application.h"
 #include "controller.h"
+#include "message.h"
 #include "moviesaver.h"
 #include "oscinterface.h"
 #include "clip.h"
@@ -115,7 +116,7 @@ void Application::run(int argc, char *argv[])
 {
     std::string video_source = "/dev/video0";
     std::string project_home = DEFAULT_PROJECT_HOME;
-    po::options_description desc("Toonloop live stop motion animation editor");
+    po::options_description desc("Toonloop live animation editor");
     // std::cout << "adding options" << std::endl;
     desc.add_options()
         ("help,h", "Show this help message and exit")
@@ -143,6 +144,11 @@ void Application::run(int argc, char *argv[])
         ("enable-mouse-controls,M", po::bool_switch(), "Enables simple controls with the mouse.")
         ("width", po::value<int>()->default_value(DEFAULT_CAPTURE_WIDTH), "Image capture width")
         ("height", po::value<int>()->default_value(DEFAULT_CAPTURE_HEIGHT), "Image capture height")
+        ("max-images-per-clip", po::value<int>()->default_value(0), "If not zero, sets a maximum number of images per clip. The first image is then removed when one is added.")
+        ("enable-intervalometer", po::bool_switch(), "Enables the intervalometer for the default clip at startup.")
+        ("intervalometer-rate", po::value<float>()->default_value(10.0), "Sets the default intervalometer rate.")
+        ("layout", po::value<unsigned int>()->default_value(0), "Sets the layout number.") // TODO:2010-10-05:aalex:Print the NUM_LAYOUTS
+        ("remove-deleted-images", po::bool_switch(), "Enables the removal of useless image files.")
         ; // <-- important semi-colon
     po::variables_map options;
     
@@ -227,6 +233,8 @@ void Application::run(int argc, char *argv[])
     config_->set_project_home(project_home);
     update_project_home_for_each_clip();
     config_->set_video_source(video_source);
+    
+    
 
     // Start OSC
     if (config_->get_osc_recv_port() != OSC_PORT_NONE)
@@ -270,9 +278,9 @@ void Application::run(int argc, char *argv[])
         }
     } else
         std::cout << "OSC sender is disabled" << std::endl;
+    osc_.reset(new OscInterface(this, config_->get_osc_recv_port(), config_->get_osc_send_port(), config_->get_osc_send_addr()));
     if (config_->get_osc_recv_port() != OSC_PORT_NONE || config_->get_osc_send_port() != OSC_PORT_NONE)
     {
-        osc_.reset(new OscInterface(this, config_->get_osc_recv_port(), config_->get_osc_send_port(), config_->get_osc_send_addr()));
         osc_->start();
     }
 
@@ -304,6 +312,22 @@ void Application::run(int argc, char *argv[])
         else
             std::cout << "MIDI: Failed to open port " << config_->get_midi_input_number() << std::endl;
     }
+    // Sets the intervalometer stuff.
+    for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
+        iter->second->set_intervalometer_rate(config_->get_default_intervalometer_rate());
+    if (options["enable-intervalometer"].as<bool>())
+        get_controller()->toggle_intervalometer();
+
+    // Sets the remove_deleted_images thing
+    for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
+        iter->second->set_remove_deleted_images(config_->get_remove_deleted_images());
+    // Choose layout
+    unsigned int layout = options["layout"].as<unsigned int>();
+    if (layout < NUM_LAYOUTS)
+        gui_->set_layout((Gui::layout_number) layout);
+    else
+        std::cout << "There is no layout number " << layout << ". Using 0." << std::endl;
+    // Run the main loop
     std::cout << "Running toonloop" << std::endl;
     gtk_main();
 }
@@ -368,15 +392,54 @@ MovieSaver* Application::get_movie_saver()
     return movie_saver_.get();
 }
 
+OscInterface* Application::get_osc_interface() 
+{
+    return osc_.get();
+}
+
 void Application::quit()
 {
     std::cout << "Quitting the application." << std::endl;
     pipeline_->stop();
     gtk_main_quit();
 }
-
+/**
+ * Checks for asynchronous messages.
+ * 
+ * Useful for the MIDI and OSC controls.
+ */
 void Application::check_for_messages()
 {
     // TODO: move message handling here.
     get_midi_input()->consume_messages();    
+    get_osc_interface()->consume_messages();    
 }
+/**
+ * Handles asynchronous messages.
+ */
+void Application::handle_message(Message &message)
+{
+    unsigned int value = message.get_value();
+    switch (message.get_command())
+    {
+        case Message::ADD_IMAGE:
+            get_controller()->add_frame();
+            break;
+        case Message::REMOVE_IMAGE:
+            get_controller()->remove_frame();
+            break;
+        case Message::VIDEO_RECORD_ON:
+            get_controller()->enable_video_grabbing(true);
+            break;
+        case Message::VIDEO_RECORD_OFF:
+            get_controller()->enable_video_grabbing(false);
+            break;
+        case Message::SELECT_CLIP:
+            get_controller()->choose_clip(value);
+            break;
+        case Message::QUIT:
+            quit();
+            break;
+    }
+}
+
