@@ -50,6 +50,9 @@ Configuration::Configuration(const boost::program_options::variables_map &option
         std::cout << "Using MIDI input " << midi_input_number_ << std::endl;
     capture_width_ = options["width"].as<int>();
     capture_height_ = options["height"].as<int>();
+    max_images_per_clip_ = options["max-images-per-clip"].as<int>();
+    default_intervalometer_rate_ = options["intervalometer-rate"].as<float>();
+    remove_deleted_images_ = options["remove-deleted-images"].as<bool>();
 }
 
 void Configuration::set_project_home(const std::string &project_home)

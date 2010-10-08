@@ -80,6 +80,10 @@ class Configuration
         bool get_mouse_controls_enabled() const { return mouse_controls_enabled_; }
         int get_capture_width() const { return capture_width_; }
         int get_capture_height() const { return capture_height_; }
+        int get_max_images_per_clip() const { return max_images_per_clip_; }
+        float get_default_intervalometer_rate() const { return default_intervalometer_rate_; }
+        bool get_remove_deleted_images() const { return remove_deleted_images_; }
+        
     private:
         //int capture_frame_rate_;
         //int rendering_frame_rate_;
@@ -97,6 +101,9 @@ class Configuration
         std::string osc_send_addr_;
         int capture_width_;
         int capture_height_;
+        int max_images_per_clip_;
+        float default_intervalometer_rate_;
+        bool remove_deleted_images_;
 };
 #endif // __CONFIGURATION_H__
 
