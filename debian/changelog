@@ -1,3 +1,9 @@
+toonloop (2.0.0-1) lucid; urgency=low
+
+  * New upstream release
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Fri, 08 Oct 2010 19:06:41 -0400
+
 toonloop (1.9.6-1) lucid; urgency=low
 
   * New upstream release
