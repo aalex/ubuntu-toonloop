@@ -10,13 +10,11 @@ Build-Depends:
  ffmpeg,
  flex,
  gettext,
- gstreamer0.10-alsa,
  gstreamer0.10-ffmpeg,
  gstreamer0.10-plugins-bad,
  gstreamer0.10-plugins-base,
  gstreamer0.10-plugins-good,
  gstreamer0.10-plugins-ugly (>= 0.10.14),
- gstreamer0.10-pulseaudio,
  gstreamer0.10-x,
  help2man,
  libasound-dev,
@@ -57,7 +55,6 @@ Depends:
  gstreamer0.10-plugins-base,
  gstreamer0.10-plugins-good,
  gstreamer0.10-plugins-ugly (>= 0.10.14),
- gstreamer0.10-pulseaudio,
  gstreamer0.10-x,
  mencoder
 Recommends:
