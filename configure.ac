@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.0.0, support@toonloop.com)
+AC_INIT(TOONLOOP, 2.0.4, support@toonloop.com)
 AC_DEFINE([PACKAGE_URL],["http://www.toonloop.com"])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
@@ -132,12 +132,6 @@ else
     HELP2MAN=:
 fi
 
-# external tools
-AC_CHECK_PROG(MENCODER, mencoder, yes, no)
-if test "$MENCODER" = no ; then
-    AC_MSG_ERROR([Cannot find mencoder.])
-fi
-
 AS_AC_EXPAND(DATADIR, $datadir)
 AC_MSG_NOTICE(Storing data files in $DATADIR)
 
@@ -154,6 +148,7 @@ AC_CONFIG_FILES([
     man/Makefile
     tests/Makefile
     pixmaps/Makefile
+    completion/Makefile
     ])
 AC_OUTPUT
 

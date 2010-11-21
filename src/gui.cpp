@@ -164,6 +164,7 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
     // TODO:2010-09-18:aalex:Use the accelerators to allow the user to configure the controls
     // TODO:2010-09-18:aalex:Use Clutter for mouse and keyboard controls (ClutterBindingPool)
     Gui *context = static_cast<Gui*>(user_data);
+    bool verbose = context->owner_->get_configuration()->get_verbose();
 
     switch (event->keyval)
     {
@@ -258,7 +259,8 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
             // (if there is one)
             if (event->state & GDK_CONTROL_MASK)
             {
-                g_print("Ctrl-Q key pressed, quitting.\n");
+                if (verbose)
+                    g_print("Ctrl-Q key pressed, quitting.\n");
                 context->owner_->quit();
             }
             break;
@@ -267,7 +269,8 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
             // (if there is one)
             if (event->state & GDK_CONTROL_MASK)
             {
-                g_print("Ctrl-S key pressed, TODO: save the whole project.\n");
+                if (verbose)
+                    g_print("Ctrl-S key pressed, TODO: save the whole project.\n");
                 // For now, we save the clip anyways
                 context->owner_->get_controller()->save_current_clip();
             } else // no Ctrl pressed
@@ -318,11 +321,10 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
             }
             break;
         case GDK_i:
-            context->enable_hud_ = ! context->enable_hud_;
-            if (context->enable_hud_)
-                clutter_actor_show(context->info_text_actor_);
-            else
-                clutter_actor_hide(context->info_text_actor_);
+            context->toggle_info();
+            break;
+        case GDK_F1:
+            context->toggle_help();
             break;
         case GDK_o:
             context->enable_onionskin( ! context->onionskin_enabled_);
@@ -332,6 +334,29 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
     }
     return TRUE;
 }
+/**
+ * Toggles the visibility of the info text.
+ */
+void Gui::toggle_info()
+{
+    enable_info_ = ! enable_info_;
+    if (enable_info_)
+        clutter_actor_show(info_text_actor_);
+    else
+        clutter_actor_hide(info_text_actor_);
+}
+/**
+ * Toggles the visibility of the info text.
+ */
+void Gui::toggle_help()
+{
+    enable_help_ = ! enable_help_;
+    if (enable_help_)
+        clutter_actor_show(help_text_actor_);
+    else
+        clutter_actor_hide(help_text_actor_);
+}
+
 /**
  * Called when the window is deleted. Quits the application.
  */
@@ -718,7 +743,8 @@ Gui::Gui(Application* owner) :
     overlay_opacity_(50),
     onionskin_opacity_(50),
     onionskin_enabled_(false),
-    enable_hud_(false),
+    enable_info_(false),
+    enable_help_(false),
     fade_duration_ratio_(0.0)
 {
     //video_xwindow_id_ = 0;
@@ -827,10 +853,13 @@ Gui::Gui(Application* owner) :
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(live_input_texture_));
     clutter_actor_hide_all(CLUTTER_ACTOR(live_input_texture_));
     
-    // TEXT
-    info_text_actor_ = clutter_text_new_full("", "Sans 16px", clutter_color_new(255, 255, 255, 255));
-    //update_info_text();
+    // INFO TEXT
+    info_text_actor_ = clutter_text_new_full("Sans 16px", "", clutter_color_new(255, 255, 255, 255));
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(info_text_actor_));
+    // HELP TEXT
+    std::string HELP_TEXT(INTERACTIVE_HELP + "(Press F1 to hide)");
+    help_text_actor_ = clutter_text_new_full("Sans 12px", HELP_TEXT.c_str(), clutter_color_new(255, 255, 255, 255));
+    clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(help_text_actor_));
     // Sort actors and groups:
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(playback_group_), NULL);
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(onionskin_group_), NULL);
@@ -845,6 +874,7 @@ Gui::Gui(Application* owner) :
     // Set visibility for other things
     enable_onionskin(false); // hides it
     clutter_actor_hide(info_text_actor_);
+    clutter_actor_hide(help_text_actor_);
     // shown when we get first live image size, and we play the first image
     clutter_actor_hide(live_input_texture_); 
     clutter_actor_hide_all(CLUTTER_ACTOR(playback_group_));
@@ -857,7 +887,7 @@ void Gui::update_info_text()
 {
     std::ostringstream os;
     Clip* current_clip = owner_->get_current_clip();
-    os << "Toonloop " << PACKAGE_VERSION << std::endl;
+    os << "Toonloop " << PACKAGE_VERSION << " info (press i to hide)" << std::endl;
     os << "Current clip: " << current_clip->get_id() << std::endl;
     os << "FPS: " << current_clip->get_playhead_fps() << std::endl;
     os << "Playhead: " << current_clip->get_playhead() << std::endl;
@@ -881,7 +911,7 @@ ClutterActor* Gui::get_live_input_texture() const
 
 Gui::~Gui()
 {
-    std::cout << "~Gui" << std::endl;
+    //std::cout << "~Gui" << std::endl;
     //TODO:
     //for (ActorIterator iter = playback_textures_.begin(); iter != playback_textures_.end(); ++iter)
     //    //iter->
