@@ -1,8 +1,9 @@
 toonloop (2.0.4-1) lucid; urgency=low
 
   * Fixed version number. Last package was actually 2.0.4
+  * Install bash-completion files in /etc
 
- -- Alexandre Quessy <alexandre@quessy.net>  Sun, 21 Nov 2010 10:14:15 -0500
+ -- Alexandre Quessy <alexandre@quessy.net>  Sun, 21 Nov 2010 10:20:29 -0500
 
 toonloop (2.0.2-1) lucid; urgency=low
 
