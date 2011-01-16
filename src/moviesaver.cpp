@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,6 +49,8 @@ bool MovieSaver::add_saving_task(Clip& clip)
     // gather info about this clip:
     current_task_.clip_id_ = clip.get_id();
     current_task_.fps_ = clip.get_playhead_fps();
+    current_task_.width_ = clip.get_width();
+    current_task_.height_ = clip.get_height();
     //std::cout << "MovieSaver Clip ID is " << current_task_.clip_id_ << " and it has " << clip.size() << " images" << std::endl;  
 
     // load image names

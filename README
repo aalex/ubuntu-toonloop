@@ -58,6 +58,7 @@ Known Bugs
 Here is a list of known bugs. See also the TODO file. That is what we mainly use to manage issues, rather than a Web application. Please read and write on the mailing list if you encounter some issues with Toonloop.
 
  * The portrait layout doesn't look nice: both images overlap when not in 4:3 ratio.
+ * If you run toonloop from a directory in your home (not in /usr/local) it might use the midi.xml file in /usr/local, unless you are in the same directory as the executable. Be careful.
 
 
 Basic Tools for Compiling
@@ -110,7 +111,8 @@ Here is the list of Debian package that you will need to build Toonloop 2.x.
  libstk0-dev,
  libxml2-dev,
  libxv-dev,
- mencoder
+ mencoder,
+ mscgen (not mandatory)
 
 
 How to build Toonloop
@@ -167,8 +169,34 @@ You might need to properly configure your V4L2 video device::
   v4l2-ctl --set-fmt-video=width=768,height=480
   v4l2-ctl --set-ctrl=saturation=65535,contrast=32768
 
+You can try you r V4L2 camera with many different tools: 
+
+  vlc v4l2:///dev/video0
+
 If you use two displays, you might want to use 2 separate X screens::
 
   sudo nvidia-settings
   DISPLAY=:0.1 toonloop --fullscreen
+
+
+Copyright and license
+---------------------
+
+Toonloop
+
+Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
+
+Toonloop is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Toonloop is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the gnu general public license
+along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
 

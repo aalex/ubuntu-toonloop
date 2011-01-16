@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,11 +17,14 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/** Main entry for the Toonloop program.
+ */
+
 #include <iostream>
 
 #include "application.h"
 
-// gint gint gchar
 int main(int argc, char* argv[])
 {
     Application app;
@@ -30,9 +32,14 @@ int main(int argc, char* argv[])
     {
         app.run(argc, argv);
     }
+    catch(const std::logic_error& e) 
+    {
+        std::cerr << "ERROR (std::logic_error): " << e.what() << "\n";
+        return 1;
+    }
     catch(const std::exception& e) 
     {
-        std::cerr << "error: " << e.what() << "\n";
+        std::cerr << "ERROR (std::exception): " << e.what() << "\n";
         return 1;
     }
     catch (...) 

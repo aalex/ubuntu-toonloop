@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +17,7 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/signals2.hpp>
 #include "application.h"
 #include "clip.h"
 #include "moviesaver.h"
@@ -29,13 +26,42 @@
 #include "timer.h"
 #include "log.h"
 
-namespace fs = boost::filesystem;
-
 Controller::Controller(Application* owner) : 
     owner_(owner)
 {
     
 }
+
+Property<int> *Controller::add_int_property(const std::string &name, int value)
+{
+    return int_properties_.add_property(name, value);
+}
+
+Property<float> *Controller::add_float_property(const std::string &name, float value)
+{
+    return float_properties_.add_property(name, value);
+}
+
+bool Controller::set_int_value(const std::string &name, int value)
+{
+    return int_properties_.set_property_value(name, value);
+}
+
+bool Controller::set_float_value(const std::string &name, float value)
+{
+    return float_properties_.set_property_value(name, value);
+}
+
+int Controller::get_int_value(const std::string &name)
+{
+    return int_properties_.get_property_value(name);
+}
+
+float Controller::get_float_value(const std::string &name)
+{
+    return float_properties_.get_property_value(name);
+}
+
 void Controller::add_frame()
 {
     //Clip* clip = owner_->get_current_clip();
@@ -111,9 +137,11 @@ void Controller::save_current_clip()
 
 void Controller::update_playback_image()
 {
+    namespace fs = boost::filesystem;
+
     static std::string prev_image_name = "";
     static Clip *prevclip = NULL;
-    static Timer playback_timer = Timer(); // TODO: move to Clip
+    static Timer playback_timer; // TODO: move to Clip
 
     Clip *thisclip = owner_->get_current_clip();
     bool move_playhead = false;
@@ -122,7 +150,7 @@ void Controller::update_playback_image()
     playback_timer.tick();
 
     // check if it is time to move the playhead
-    if ((playback_timer.get_elapsed()) >=  (1.0f / thisclip->get_playhead_fps() * 1.0) || playback_timer.get_elapsed() < 0.0f)
+    if ((playback_timer.get_elapsed()) >=  (1.0f / thisclip->get_playhead_fps() * 1.0) or playback_timer.get_elapsed() < 0.0f)
     {
         move_playhead = true;
         playback_timer.reset();
@@ -131,7 +159,7 @@ void Controller::update_playback_image()
     if (thisclip->size() == 0)
         no_image_to_play_signal_();
     
-    if(thisclip->size() > 0) 
+    if (thisclip->size() > 0) 
     {     
         if (move_playhead) // if it's time to move the playhead
             thisclip->iterate_playhead(); // updates the clip's playhead number
@@ -227,56 +255,18 @@ void Controller::set_playhead_fps(unsigned int fps)
 void Controller::change_current_clip_direction()
 {
     Clip *current_clip = owner_->get_current_clip();
-    clip_direction current = current_clip->get_direction();
-    clip_direction change_to = DIRECTION_FORWARD; // default
-    std::string signal_arg = "FORWARD";
-    switch (current)
-    {
-        case DIRECTION_FORWARD:
-            change_to = DIRECTION_BACKWARD;
-            signal_arg = "BACKWARD";
-            break;
-        case DIRECTION_BACKWARD:
-            change_to = DIRECTION_YOYO;
-            signal_arg = "YOYO";
-            break;
-        case DIRECTION_YOYO:
-            change_to = DIRECTION_FORWARD;
-            signal_arg = "FORWARD";
-            break;
-    }
-    current_clip->set_direction(change_to);
-    clip_direction_changed_signal_(current_clip->get_id(), signal_arg);
+    current_clip->change_direction();
+    clip_direction_changed_signal_(current_clip->get_id(), current_clip->get_direction());
 }
 
-void Controller::set_current_clip_direction(clip_direction direction)
+void Controller::set_current_clip_direction(const std::string &direction)
 {
     Clip *current_clip = owner_->get_current_clip();
-    clip_direction current = current_clip->get_direction();
-    if (current != direction)
-    {
-        clip_direction change_to = DIRECTION_FORWARD; // default
-        //TODO: the clip_direction_changed_signal should accept a constant, not a string
-        // That will be way simpler
-        std::string signal_arg = "FORWARD";
-        switch (current)
-        {
-            case DIRECTION_FORWARD:
-                change_to = DIRECTION_BACKWARD;
-                signal_arg = "BACKWARD";
-                break;
-            case DIRECTION_BACKWARD:
-                change_to = DIRECTION_YOYO;
-                signal_arg = "YOYO";
-                break;
-            case DIRECTION_YOYO:
-                change_to = DIRECTION_FORWARD;
-                signal_arg = "FORWARD";
-                break;
-        }
-        current_clip->set_direction(change_to);
-        clip_direction_changed_signal_(current_clip->get_id(), signal_arg);
-    }
+    bool success = current_clip->set_direction(direction);
+    if (success)
+        clip_direction_changed_signal_(current_clip->get_id(), direction);
+    else
+        std::cout << "Invalid playhead direction: " << direction << std::endl;
 }
 
 void Controller::clear_current_clip()
@@ -381,5 +371,18 @@ void Controller::move_writehead_to(unsigned int position)
         current_clip->set_writehead(position);
         writehead_moved_signal_(current_clip->get_id(), current_clip->get_writehead());
     }
+}
+
+void Controller::quit()
+{
+    owner_->quit();
+}
+
+void Controller::print_properties()
+{
+    std::cout << "Toonloop int properties:" << std::endl;
+    int_properties_.print_properties();
+    std::cout << "Toonloop float properties:" << std::endl;
+    float_properties_.print_properties();
 }
 

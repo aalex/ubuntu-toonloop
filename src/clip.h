@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,24 +27,17 @@
 #include <tr1/memory>
 #include <tr1/unordered_map>
 #include <vector>
+#include "playheaditerator.h"
 
-// forward declaration
+// forward declarations
 class Image;
-
-const unsigned int MAX_FPS = 60;
-
-enum clip_direction 
-{
-    DIRECTION_FORWARD, 
-    DIRECTION_BACKWARD,
-    DIRECTION_YOYO
-};
 
 /** The Clip class contains a list of image paths */
 class Clip 
 {
     public:
         Clip(unsigned int id);
+        static const unsigned int MAX_FPS = 60;
         unsigned int get_id() const;
         //TODO: list<int>* get_all_images();
         unsigned int frame_add();
@@ -58,8 +50,8 @@ class Clip
         void set_writehead(unsigned int new_value);
         void set_width(unsigned int width);
         void set_height(unsigned int height);
-        void set_direction(clip_direction direction) { direction_ = direction; }
-        clip_direction get_direction() { return direction_; }
+        bool set_direction(const std::string &direction);
+        const std::string &get_direction() { return current_playhead_direction_; }
         unsigned int get_width() const;
         unsigned int get_height() const;
         unsigned int get_playhead_fps() const;
@@ -74,13 +66,14 @@ class Clip
         std::string get_image_full_path(Image* image) const;
         void clear_all_images();
         long get_last_time_grabbed_image() const { return last_time_grabbed_image_; }
-        void set_last_time_grabbed_image(const long timestamp);
+        void set_last_time_grabbed_image(long timestamp);
         /** The intervalometer speed is in seconds */
         float get_intervalometer_rate() const { return intervalometer_rate_; }
-        void set_intervalometer_rate(const float rate);
+        void set_intervalometer_rate(float rate);
         bool remove_last_image();
         bool remove_first_image();
         void set_remove_deleted_images(bool enabled);
+        void change_direction();
     private:
         unsigned int id_;
         unsigned int playhead_;
@@ -89,9 +82,6 @@ class Clip
         unsigned int height_;
         unsigned int nchannels_;
         float intervalometer_rate_;
-        clip_direction direction_;
-        clip_direction yoyo_sub_direction_;
-        //std::vector<int> intervalometer_rate_;
         /**
          * This is a list of images
          * Their order can change.
@@ -110,6 +100,9 @@ class Clip
         void make_sure_playhead_and_writehead_are_valid();
         bool remove_deleted_images_;
         void remove_image_file(unsigned int index);
+        std::map< std::string, std::tr1::shared_ptr<PlayheadIterator> > playhead_iterators_;
+        std::string current_playhead_direction_;
+        void init_playhead_iterators();
 };
 
 #endif // __CLIP_H__

@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +46,7 @@ namespace fs = boost::filesystem;
  * In that case, checks if the video recording or the intervalometer is enabled. 
  * If so, grabs an image if it's time to do so.
  */
-void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_data)
+void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg, gpointer user_data)
 {
     Pipeline *context = static_cast<Pipeline*>(user_data);
     bool verbose = context->owner_->get_configuration()->get_verbose();
@@ -82,9 +81,10 @@ void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_d
             // VIDEO RECORDING:
             if (context->get_record_all_frames())
             {
-                std::cout << "Video grabbing is on." << std::endl; 
+                //std::cout << "Video grabbing is on." << std::endl; 
                 unsigned long time_between_frames = (unsigned long)(1.0f / float(current_clip->get_playhead_fps()) * timing::TIMESTAMP_PRECISION);
-                std::cout << "now=" << now << " last_time_grabbed=" << last_time_grabbed << " time_between_frames" << time_between_frames << std::endl;
+                if (verbose)
+                    std::cout << "now=" << now << " last_time_grabbed=" << last_time_grabbed << " time_between_frames" << time_between_frames << std::endl;
                 if ((now - last_time_grabbed) > time_between_frames)
                 {
                     must_grab_now = true;
@@ -106,7 +106,8 @@ void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_d
             }
             if (must_grab_now)
             {
-                std::cout << "Grabbing an image" << std::endl;
+                if (verbose)
+                    std::cout << "Grabbing an image" << std::endl;
                 context->save_image_to_current_clip(pixbuf);
                 current_clip->set_last_time_grabbed_image(now);
             }
@@ -132,8 +133,12 @@ void Pipeline::bus_message_cb(GstBus* /*bus*/, GstMessage *msg,  gpointer user_d
 /**
  * GST bus signal watch callback 
  */
-void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, GstElement* /*pipeline*/)
+void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, gpointer user_data)
 {
+    Pipeline *context = static_cast<Pipeline*>(user_data);
+    bool is_verbose = context->owner_->get_configuration()->get_verbose();
+    if (is_verbose)
+        std::cout << __FUNCTION__ << std::endl;
     bool stop_it = true;
     if (GST_MESSAGE_TYPE(message) == GST_MESSAGE_ERROR)
     {
@@ -172,7 +177,7 @@ void Pipeline::end_stream_cb(GstBus* /*bus*/, GstMessage* message, GstElement* /
     }
 }
 
-void Pipeline::on_new_live_pixbuf(GstBus* /*bus*/, GstMessage* /*message*/, GstElement* /*pipeline*/)
+void Pipeline::on_new_live_pixbuf(GstBus* /*bus*/, GstMessage* /*message*/, gpointer /*user_data*/)
 {
     std::cout << "on_new_live_pixbuf" << std::endl;
 }
@@ -319,12 +324,12 @@ Pipeline::Pipeline(Application* owner) :
     {
         // TODO:2010-08-06:aalex:We could rely on gstreamer-properties to configure the video source.
         // Add -d gconf (gconfvideosrc)
-        if (verbose)
-            std::cout << "Video source: v4l2src" << std::endl;
-        videosrc_  = gst_element_factory_make("v4l2src", "videosrc0"); 
         std::string device_name(config->videoSource());
         if (verbose)
-            g_print("Using camera %s.\n", device_name.c_str());
+        {
+            std::cout << "Video source: v4l2src with camera " << device_name << std::endl;
+        }
+        videosrc_  = gst_element_factory_make("v4l2src", "videosrc0"); 
         g_object_set(videosrc_, "device", device_name.c_str(), NULL); 
     }
     // TODO: use something else than g_assert to see if we could create the elements.
@@ -351,6 +356,21 @@ Pipeline::Pipeline(Application* owner) :
     gdkpixbufsink_ = gst_element_factory_make("gdkpixbufsink", "gdkpixbufsink0");
     g_assert(gdkpixbufsink_);
 
+    bool is_preview_enabled = config->get_preview_window_enabled();
+    GstElement *queue2 = NULL;
+    GstElement *ffmpegcolorspace1 = NULL;
+    GstElement *xvimagesink = NULL;
+    if (is_preview_enabled)
+    {
+        queue2 = gst_element_factory_make("queue", "queue2");
+        g_assert(queue2);
+        ffmpegcolorspace1 = gst_element_factory_make("ffmpegcolorspace", "ffmpegcolorspace1");
+        g_assert(ffmpegcolorspace1);
+        xvimagesink = gst_element_factory_make("xvimagesink", "xvimagesink0");
+        g_assert(xvimagesink);
+        g_object_set(xvimagesink, "force-aspect-ratio", TRUE, NULL);
+    }
+
     // add elements
     gst_bin_add(GST_BIN(pipeline_), videosrc_); // capture
     gst_bin_add(GST_BIN(pipeline_), capsfilter0);
@@ -361,6 +381,12 @@ Pipeline::Pipeline(Application* owner) :
     gst_bin_add(GST_BIN(pipeline_), videosink_);
     gst_bin_add(GST_BIN(pipeline_), queue1); // branch #1: gdkpixbufsink
     gst_bin_add(GST_BIN(pipeline_), gdkpixbufsink_);
+    if (is_preview_enabled)
+    {
+        gst_bin_add(GST_BIN(pipeline_), queue2); // branch #2: xvimagesink
+        gst_bin_add(GST_BIN(pipeline_), ffmpegcolorspace1);
+        gst_bin_add(GST_BIN(pipeline_), xvimagesink);
+    }
 
     // link pads:
     gboolean is_linked = FALSE; 
@@ -445,6 +471,27 @@ Pipeline::Pipeline(Application* owner) :
         exit(1); 
     }
 
+    if (is_preview_enabled)
+    {
+        
+        is_linked = gst_element_link_pads(tee0, "src2", queue2, "sink");
+        if (!is_linked) { 
+            g_print("Could not link %s to %s.\n", "tee0", "queue2"); 
+            exit(1); 
+        }
+       
+        is_linked = gst_element_link(queue2, ffmpegcolorspace1);
+        if (!is_linked) { 
+            g_print("Could not link %s to %s.\n", "queue2", "ffmpegcolorspace1"); 
+            exit(1); 
+        }
+        is_linked = gst_element_link(ffmpegcolorspace1, xvimagesink);
+        if (!is_linked) { 
+            g_print("Could not link %s to %s.\n", "ffmpegcolorspace1", "xvimagesink0"); 
+            exit(1); 
+        }
+    }
+
     if (verbose)
         std::cout << "Will now setup the pipeline bus." << std::endl;
     /* setup bus */
@@ -458,6 +505,8 @@ Pipeline::Pipeline(Application* owner) :
 
     /* run */
     GstStateChangeReturn ret;
+    if (verbose)
+        std::cout << "Set pipeline to PLAYING" << std::endl;
     ret = gst_element_set_state(GST_ELEMENT(pipeline_), GST_STATE_PLAYING);
     if (ret == GST_STATE_CHANGE_FAILURE)
     {
@@ -477,6 +526,8 @@ Pipeline::Pipeline(Application* owner) :
         exit(1);
         //FIXME: causes a segfault: context->owner_->quit();
     }
+    if (verbose)
+        std::cout << "Successfully started the pipeline." << std::endl;
 }
 
 // Desctructor. TODO: do we need to free anything?
@@ -500,7 +551,8 @@ std::string Pipeline::guess_source_caps(unsigned int framerateIndex) const
     const GValue *val = gst_structure_get_value(structure, "framerate");
     if (is_verbose)
         LOG_DEBUG("Caps structure from v4l2src srcpad: " << gst_structure_to_string(structure));
-    gint framerate_numerator, framerate_denominator; 
+    gint framerate_numerator = 1;
+    gint framerate_denominator = 1; 
     if (GST_VALUE_HOLDS_LIST(val))
     {
         // trying another one

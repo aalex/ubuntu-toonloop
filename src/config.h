@@ -1,6 +1,9 @@
 /* src/config.h.  Generated from config.h.in by configure.  */
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* "Data dir" */
+#define DATADIR "/usr/local/share"
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
 
@@ -84,7 +87,7 @@
 #define PACKAGE_NAME "TOONLOOP"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "TOONLOOP 2.0.4"
+#define PACKAGE_STRING "TOONLOOP 2.1.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "toonloop"
@@ -93,13 +96,25 @@
 #define PACKAGE_URL "http://www.toonloop.com"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.0.4"
+#define PACKAGE_VERSION "2.1.6"
+
+/* major version */
+#define PACKAGE_VERSION_MAJOR 2
+
+/* micro version */
+#define PACKAGE_VERSION_MICRO 6
+
+/* minor version */
+#define PACKAGE_VERSION_MINOR 1
+
+/* "Pixmaps dir" */
+#define PIXMAPS_DIR "/usr/local/share/pixmaps"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "2.0.4"
+#define VERSION "2.1.6"
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */

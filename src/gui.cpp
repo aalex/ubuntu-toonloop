@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +21,12 @@
 /**
  * Graphical user interface made with Clutter 
  */
+#include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <clutter-gst/clutter-gst.h>
 #include <clutter-gtk/clutter-gtk.h>
 #include <clutter/clutter.h>
+#include <cmath>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk/gdkx.h>
@@ -39,11 +40,20 @@
 #include "controller.h"
 #include "gui.h"
 #include "pipeline.h"
+#include "properties.h"
+#include "property.h"
+#include "brcosaeffect.h"
 #include "timer.h"
+#include "unused.h"
 
 namespace fs = boost::filesystem;
 using std::tr1::shared_ptr;
 typedef std::vector<ClutterActor*>::iterator ActorIterator;
+
+static int clip_int(int value, int from, int to)
+{
+    return std::max(std::min(value, to), from);
+}
 
 gboolean Gui::on_mouse_button_event(GtkWidget* /* widget */, GdkEventButton *event, gpointer user_data)
 {
@@ -57,15 +67,18 @@ gboolean Gui::on_mouse_button_event(GtkWidget* /* widget */, GdkEventButton *eve
     return TRUE;
 }
 
-void Gui::set_overlay_opacity(int value)
+/**
+ * [0,255]
+ */
+void Gui::on_livefeed_opacity_changed(std::string &name, int value)
 {
-    overlay_opacity_ = value;
+    UNUSED(name);
     if (owner_->get_configuration()->get_verbose())
-        std::cout << "overlay opacity: " << overlay_opacity_ << std::endl;
+        std::cout << "Gui::" << __FUNCTION__ << " livefeed opacity: " << value << std::endl;
     if (current_layout_ == LAYOUT_OVERLAY)
-        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), overlay_opacity_);
-    else
-        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), 255);
+    {
+        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), value);
+    }
 }
 
 void Gui::enable_onionskin(bool value)
@@ -157,13 +170,13 @@ void Gui::showCursor()
  * - o: toggles onion skinning
  * - []: increase/decrease opacity of the live input image in the overlay layout.
  */
-
 gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
 {
     // TODO: Ctrl-s: save the whole project
     // TODO:2010-09-18:aalex:Use the accelerators to allow the user to configure the controls
     // TODO:2010-09-18:aalex:Use Clutter for mouse and keyboard controls (ClutterBindingPool)
     Gui *context = static_cast<Gui*>(user_data);
+    Controller *controller = context->owner_->get_controller();
     bool verbose = context->owner_->get_configuration()->get_verbose();
 
     switch (event->keyval)
@@ -173,27 +186,27 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
             if ((event->state & GDK_LOCK_MASK) != 0)
             {
                 std::cout << "Caps_Lock off." << std::endl;
-                context->owner_->get_controller()->enable_video_grabbing(false);
+                controller->enable_video_grabbing(false);
             } else {
                 std::cout << "Caps_Lock on. Recording video." << std::endl;
-                context->owner_->get_controller()->enable_video_grabbing(true);
+                controller->enable_video_grabbing(true);
             }
             break;
         }
         case GDK_Up:
-            context->owner_->get_controller()->increase_playhead_fps();
+            controller->increase_playhead_fps();
             break;
         case GDK_Down:
-            context->owner_->get_controller()->decrease_playhead_fps();
+            controller->decrease_playhead_fps();
             break;
         //case GDK_XXX:
-        //    context->owner_->get_controller()->set_current_clip_direction(DIRECTION_BACKWARD);
+        //    controller->set_current_clip_direction(DIRECTION_BACKWARD);
         //    break;
         //case GDK_XXX:
-        //    context->owner_->get_controller()->set_current_clip_direction(DIRECTION_FORWARD);
+        //    controller->set_current_clip_direction(DIRECTION_FORWARD);
         //    break;
         case GDK_Tab:
-            context->owner_->get_controller()->change_current_clip_direction();
+            controller->change_current_clip_direction();
             break;
         case GDK_period:
             //TODO:2010-08-27:aalex:Create Controller:toggle_layout
@@ -202,23 +215,23 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
         case GDK_r:
             // Ctrl-r or just r?
             //if (event->state & GDK_CONTROL_MASK)
-            context->owner_->get_controller()->clear_current_clip();
+            controller->clear_current_clip();
             break;
         case GDK_BackSpace:
-            context->owner_->get_controller()->remove_frame();
+            controller->remove_frame();
             break;
         case GDK_f:
         case GDK_Escape:
             context->toggleFullscreen(widget);
             break;
         case GDK_space:
-            context->owner_->get_controller()->add_frame();
+            controller->add_frame();
             break;
         case GDK_Page_Up:
-            context->owner_->get_controller()->choose_previous_clip();
+            controller->choose_previous_clip();
             break;
         case GDK_Page_Down:
-            context->owner_->get_controller()->choose_next_clip();
+            controller->choose_next_clip();
             break;
         case GDK_0:
         case GDK_1:
@@ -247,11 +260,13 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
                     context->set_layout(LAYOUT_OVERLAY);
                 else if (number_pressed == 3)
                     context->set_layout(LAYOUT_PORTRAIT);
+                else if (number_pressed == 4)
+                    context->set_layout(LAYOUT_LIVEFEED_ONLY);
                 else
                     std::cout << "No layout with number " << number_pressed << std::endl;
             }
             else
-                context->owner_->get_controller()->choose_clip(number_pressed);
+                controller->choose_clip(number_pressed);
             break;
         }
         case GDK_q:
@@ -272,53 +287,43 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
                 if (verbose)
                     g_print("Ctrl-S key pressed, TODO: save the whole project.\n");
                 // For now, we save the clip anyways
-                context->owner_->get_controller()->save_current_clip();
+                controller->save_current_clip();
             } else // no Ctrl pressed
-                context->owner_->get_controller()->save_current_clip();
+                controller->save_current_clip();
             break;
         case GDK_a:
             //std::cout << "Toggle intervalometer." << std::endl; 
-            context->owner_->get_controller()->toggle_intervalometer();
+            controller->toggle_intervalometer();
             break;
         case GDK_k:
-            context->owner_->get_controller()->increase_intervalometer_rate();
+            controller->increase_intervalometer_rate();
             break;
         case GDK_j:
-            context->owner_->get_controller()->decrease_intervalometer_rate();
+            controller->decrease_intervalometer_rate();
             break;
         case GDK_Left:
-            context->owner_->get_controller()->move_writehead_to_previous();
+            controller->move_writehead_to_previous();
             break;
         case GDK_Right:
-            context->owner_->get_controller()->move_writehead_to_next();
+            controller->move_writehead_to_next();
             break;
         case GDK_Return:
-            context->owner_->get_controller()->move_writehead_to_last();
+            controller->move_writehead_to_last();
             break;
         case GDK_semicolon:
-            context->owner_->get_controller()->move_writehead_to_first();
+            controller->move_writehead_to_first();
             break;
         case GDK_bracketleft:
-            if (context->overlay_opacity_ > 0)
-                context->set_overlay_opacity(context->overlay_opacity_ - 1);
+            controller->set_int_value("livefeed_opacity", clip_int(controller->get_int_value("livefeed_opacity") - 1, 0, 255));
             break;
         case GDK_bracketright:
-            if (context->overlay_opacity_ < 255)
-                context->set_overlay_opacity(context->overlay_opacity_ + 1);
+            controller->set_int_value("livefeed_opacity", clip_int(controller->get_int_value("livefeed_opacity") + 1, 0, 255));
             break;
         case GDK_parenleft:
-            if (context->fade_duration_ratio_ > 0.0f)
-            {
-                context->fade_duration_ratio_ = context->fade_duration_ratio_ - 0.1;
-                std::cout << "Duration ratio: " << context->fade_duration_ratio_ << std::endl;
-            }
+            context->crossfade_increment(-0.1f);
             break;
         case GDK_parenright:
-            if (context->fade_duration_ratio_ < 10.0f)
-            {
-                context->fade_duration_ratio_ = context->fade_duration_ratio_ + 0.1f;
-                std::cout << "Duration ratio: " << context->fade_duration_ratio_ << std::endl;
-            }
+            context->crossfade_increment(0.1f);
             break;
         case GDK_i:
             context->toggle_info();
@@ -329,11 +334,60 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
         case GDK_o:
             context->enable_onionskin( ! context->onionskin_enabled_);
             break;
+        case GDK_x:
+            controller->set_int_value("black_out", 1 - controller->get_int_value("black_out")); // toggle [0,1]
+            break;
+        case GDK_b:
+            {
+                Property<int> *blending_mode = controller->int_properties_.get_property("blending_mode");
+                if (blending_mode->get_value() == 1) //context->blending_mode_ == BLENDING_MODE_ADDITIVE)
+                    blending_mode->set_value(0);
+                    //context->set_blending_mode(BLENDING_MODE_NORMAL);
+                else
+                    blending_mode->set_value(1);
+                    //context->set_blending_mode(BLENDING_MODE_ADDITIVE);
+                std::cout << "Blending mode:" << context->blending_mode_ << std::endl;
+            }
+            break;
         default:
             break;
     }
     return TRUE;
 }
+
+void Gui::on_crossfade_ratio_changed(std::string &name, float value)
+{
+    UNUSED(name);
+    if (crossfade_ratio_ != value)
+    {
+        crossfade_ratio_ = value;
+        if (owner_->get_configuration()->get_verbose())
+            std::cout << "Crossfade ratio: " << value << std::endl;
+    }
+}
+
+/**
+ * Adds a certain amount of crossfading duration to the crossfade between images.
+ * The given value can be negative.
+ */
+void Gui::crossfade_increment(float value)
+{
+    const float maximum = 10.0f;
+    float current = crossfade_ratio_;
+    float new_value = current + value;
+
+    if (new_value < 0.0f)
+        new_value = 0.0f;
+    else if (new_value > maximum)
+        new_value = maximum;
+    if (crossfade_ratio_ != new_value)
+    {
+        crossfade_ratio_ = new_value;
+        if (owner_->get_configuration()->get_verbose())
+            std::cout << "Duration ratio: " << new_value << std::endl;
+    }
+}
+
 /**
  * Toggles the visibility of the info text.
  */
@@ -366,6 +420,7 @@ void Gui::on_delete_event(GtkWidget* /*widget*/, GdkEvent* /*event*/, gpointer u
     g_print("Window has been deleted.\n");
     context->owner_->quit();
 }
+
 /**
  * Toggles fullscreen mode on/off.
  */
@@ -374,6 +429,7 @@ void Gui::toggleFullscreen(GtkWidget *widget)
     // toggle fullscreen state
     isFullscreen_ ? makeUnfullscreen(widget) : makeFullscreen(widget);
 }
+
 /** 
  * Makes the window fullscreen.
  */
@@ -382,6 +438,7 @@ void Gui::makeFullscreen(GtkWidget *widget)
     gtk_window_stick(GTK_WINDOW(widget)); // window is visible on all workspaces
     gtk_window_fullscreen(GTK_WINDOW(widget));
 }
+
 /**
  * Makes the window not fullscreen.
  */
@@ -390,16 +447,17 @@ void Gui::makeUnfullscreen(GtkWidget *widget)
     gtk_window_unstick(GTK_WINDOW(widget)); // window is not visible on all workspaces
     gtk_window_unfullscreen(GTK_WINDOW(widget));
 }
+
 /**
  * Slot for the Controller's next_image_to_play_signal_ signal.
  *
  * Called when it's time to update the image to play back.
  * 
- * The next image to play is raised on top of the input image textures.
- * If the fade_duration_ratio_ (TO RENAME) is set, tweens its opacity from 0 to 255 in 
+ * The next image to play is lowered to bottom of the input image textures.
+ * If the crossfade_ratio_ is set, tweens its opacity from 255 to 0 in 
  * as much ms there are between two frames currently. 
  */
-void Gui::on_next_image_to_play(unsigned int /*clip_number*/, unsigned int/*image_number*/, std::string file_name)
+void Gui::on_next_image_to_play(unsigned int clip_number, unsigned int/*image_number*/, std::string file_name)
 {
     GError *error = NULL;
     gboolean success;
@@ -409,20 +467,27 @@ void Gui::on_next_image_to_play(unsigned int /*clip_number*/, unsigned int/*imag
     playback_textures_.pop_back();
     // Load file
     success = clutter_texture_set_from_file(CLUTTER_TEXTURE(playback_textures_.at(0)), file_name.c_str(), &error);
-    clutter_container_raise_child(CLUTTER_CONTAINER(playback_group_), CLUTTER_ACTOR(playback_textures_.at(0)), NULL);
+    clutter_container_lower_child(CLUTTER_CONTAINER(playback_group_), CLUTTER_ACTOR(playback_textures_.at(0)), NULL);
+    clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(0)), 255);
    
+    if (owner_->get_clip(clip_number)->size() == 0)
+    {
+        if (owner_->get_configuration()->get_verbose())
+            g_print("No image to play in current clip.\n");
+    }
     // TODO: Handle the ClutterAnimation* 
     // Attach a callback to when it's done
-    if (fade_duration_ratio_ >= 0.01f)
+    if (crossfade_ratio_ > 0.0f && owner_->get_clip(clip_number)->size() > 1) // do not fade if only one image in clip
     {
-        unsigned int fps = owner_->get_current_clip()->get_playhead_fps();
-        unsigned int duration = (unsigned int) ((1.0f / fps * fade_duration_ratio_) * 1000);
-        clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(0)), 0);
-        clutter_actor_animate(CLUTTER_ACTOR(playback_textures_.at(0)), CLUTTER_LINEAR, duration, "opacity", 255, NULL);  
+        unsigned int fps = owner_->get_clip(clip_number)->get_playhead_fps();
+        unsigned int duration = (unsigned int) (((1.0f / fps) * crossfade_ratio_) * 1000);
+        //if (owner_->get_configuration()->get_verbose())
+        //    std::cout << "animate texture for " << duration << " ms" << std::endl;
+        // TODO:2010-11-10:aalex:If there is only one image in the clip, do not fade out.
+        clutter_actor_animate(CLUTTER_ACTOR(playback_textures_.at(1)), CLUTTER_EASE_IN_OUT_CUBIC, duration, "opacity", 0, NULL);  
     }
     else
-        clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(0)), 255);
-        
+        clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(1)), 0);
     // TODO: validate this path
     if (!success)
     {
@@ -438,7 +503,7 @@ void Gui::on_next_image_to_play(unsigned int /*clip_number*/, unsigned int/*imag
  * 
  * Updates the onionskin texture
  */
-void Gui::on_frame_added(unsigned int /*clip_number*/, unsigned int image_number)
+void Gui::on_frame_added(unsigned int clip_number, unsigned int image_number)
 {
     if (owner_->get_configuration()->get_verbose())
         std::cout << "Gui::on_frame_added" << std::endl;
@@ -447,10 +512,10 @@ void Gui::on_frame_added(unsigned int /*clip_number*/, unsigned int image_number
     onionskin_textures_.insert(onionskin_textures_.begin() + 0, _tmp);
     onionskin_textures_.pop_back();
     // Get image file name
-    Clip* clip = owner_->get_current_clip();
+    Clip* clip = owner_->get_clip(clip_number);
     Image* image = clip->get_image(image_number);
     if (image == 0)
-        std::cout << "Could not get a handle to any image!" << std::endl;
+        std::cout << __FUNCTION__ << ": Could not get a handle to any image!" << std::endl;
     else
     {
         GError *error = NULL;
@@ -484,39 +549,40 @@ void Gui::on_frame_added(unsigned int /*clip_number*/, unsigned int image_number
 void Gui::on_render_frame(ClutterTimeline * /*timeline*/, gint /*msecs*/, gpointer user_data)
 {
     // Prints rendering FPS information
-    static int number_of_frames_in_last_second = 0; // counting FPS
-    static Timer fps_calculation_timer = Timer();
-    
+
     Gui *context = static_cast<Gui*>(user_data);
 
     context->owner_->check_for_messages();
     bool verbose = context->owner_->get_configuration()->get_verbose();
     Clip *thisclip = context->owner_->get_current_clip();
-    
-    context->update_info_text();
 
-    fps_calculation_timer.tick();
-    ++number_of_frames_in_last_second;
     // calculate rendering FPS
-    if (fps_calculation_timer.get_elapsed() >= 1.0f)
+    context->fps_calculation_timer_.tick();
+    ++context->number_of_frames_in_last_second_;
+    if (context->fps_calculation_timer_.get_elapsed() >= 1.0f)
     {
         if (verbose)
-            std::cout << "Rendering FPS: " << number_of_frames_in_last_second << std::endl;
-        number_of_frames_in_last_second = 0;
-        fps_calculation_timer.reset();
+            std::cout << "Rendering FPS: " << context->number_of_frames_in_last_second_ << std::endl;
+        context->rendering_fps_ = context->number_of_frames_in_last_second_;
+        context->number_of_frames_in_last_second_ = 0;
+        context->fps_calculation_timer_.reset();
     }
+    // Display info:
+    if (context->enable_info_)
+        context->update_info_text();
+    context->info_window_.update_info_window();
 
     context->owner_->get_controller()->update_playback_image();
 
     //TODO:2010-08-26:aalex:connect to Controller's on_no_image_to_play
     if(thisclip->size() > 0) 
     {     
-        // do we really need to check an actor is visible before showing it?
-        if (! CLUTTER_ACTOR_IS_VISIBLE(context->playback_group_))
+        if (context->current_layout_ != LAYOUT_LIVEFEED_ONLY)
             clutter_actor_show_all(CLUTTER_ACTOR(context->playback_group_));
-    } else {
-        if (CLUTTER_ACTOR_IS_VISIBLE(context->playback_group_))
+        else
             clutter_actor_hide_all(CLUTTER_ACTOR(context->playback_group_));
+    } else {
+        clutter_actor_hide_all(CLUTTER_ACTOR(context->playback_group_));
     }
     // // This is just a test
     // static float rot = 0.0f;
@@ -548,6 +614,7 @@ void on_stage_allocation_changed(ClutterActor * /*stage*/,
  */
 void Gui::resize_actors() 
 {
+    Controller *controller = owner_->get_controller();
     // Hide or show the live input:
     if (current_layout_ == LAYOUT_PLAYBACK_ONLY)
     {
@@ -556,19 +623,25 @@ void Gui::resize_actors()
     else if (current_layout_ == LAYOUT_OVERLAY)
     {    
         clutter_actor_show_all(CLUTTER_ACTOR(live_input_texture_));
-        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), overlay_opacity_);
+        Property<int> *livefeed_opacity = controller->int_properties_.get_property("livefeed_opacity"); // TODO: use int_properties_.get_value() or it might crash if the property is not found!
+        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), livefeed_opacity->get_value());
     } 
-    else  // LAYOUT_SPLITSCREEN or LAYOUT_PORTRAIT
+    else  // LAYOUT_SPLITSCREEN or LAYOUT_PORTRAIT or LAYOUT_LIVEFEED_ONLY
     {
         clutter_actor_show_all(CLUTTER_ACTOR(live_input_texture_));
         clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), 255);
     }
-        
+
+    if (current_layout_ == LAYOUT_LIVEFEED_ONLY)
+        clutter_actor_hide(CLUTTER_ACTOR(playback_group_));
+    else
+        clutter_actor_show(CLUTTER_ACTOR(playback_group_));
     // Figure out the size of the area on which we draw things
     gfloat area_x, area_y, area_width, area_height;
     gfloat stage_width, stage_height;
 
     clutter_actor_get_size(stage_, &stage_width, &stage_height);
+
     area_height = (video_input_height_ * stage_width) / video_input_width_;
     if (area_height <= stage_height) 
     {
@@ -616,6 +689,10 @@ void Gui::resize_actors()
     {
         // all actors are full screen
     } 
+    else if (current_layout_ == LAYOUT_LIVEFEED_ONLY) 
+    {
+        // all actors are full screen
+    } 
 
     else if (current_layout_ == LAYOUT_PORTRAIT)
     {
@@ -633,25 +710,26 @@ void Gui::resize_actors()
         // FIXME: The following looks OK when the window ration is 4:3 or smaller, but not when bigger than that. 
         playback_tex_x = area_width / 2.0f - ((live_tex_width - live_tex_height) / 2); // in the middle
         playback_tex_y = live_tex_y;
-        
+
         // rotation: 
         rotation = 90.0f;
     }
     else 
         std::cout << "ERROR: Invalid layout" << std::endl; // should not occur...
-    
+
     // Now, set actually everything:
     // Live input:
     clutter_actor_set_position(CLUTTER_ACTOR(live_input_texture_), live_tex_x, live_tex_y);
     clutter_actor_set_size(CLUTTER_ACTOR(live_input_texture_), live_tex_width, live_tex_height);
     clutter_actor_set_rotation(CLUTTER_ACTOR(live_input_texture_), CLUTTER_Z_AXIS, rotation, live_tex_width / 2.0f, live_tex_height / 2.0f, 0.0f);
-    
+
+    // TODO: maybe not do the following if layout is LAYOUT_LIVEFEED_ONLY
+
     // Playback:
     for (ActorIterator iter = playback_textures_.begin(); iter != playback_textures_.end(); ++iter)
     {
         clutter_actor_set_position(CLUTTER_ACTOR(*iter), playback_tex_x, playback_tex_y);
         clutter_actor_set_size(CLUTTER_ACTOR(*iter), playback_tex_width, playback_tex_height);
-        clutter_actor_set_opacity(CLUTTER_ACTOR(*iter), 255);
         clutter_actor_set_rotation(CLUTTER_ACTOR(*iter), CLUTTER_Z_AXIS, rotation, playback_tex_width / 2.0f, playback_tex_height / 2.0f, 0.0f);
     }
     // Onion skin: same as live input
@@ -661,6 +739,7 @@ void Gui::resize_actors()
         clutter_actor_set_size(CLUTTER_ACTOR(*iter), live_tex_width, live_tex_height);
         clutter_actor_set_rotation(CLUTTER_ACTOR(*iter), CLUTTER_Z_AXIS, rotation, live_tex_width / 2.0f, live_tex_height / 2.0f, 0.0f);
     }
+    clutter_actor_set_size(black_out_rectangle_, stage_width, stage_height);
 }
 /**
  * Called when the size of the input image has changed.
@@ -677,7 +756,7 @@ void Gui::on_live_input_texture_size_changed(ClutterTexture *texture, gfloat wid
     gui->video_input_height_ = (float) height;
 
     ClutterActor *stage;
-  
+
     stage = clutter_actor_get_stage(CLUTTER_ACTOR(texture));
     if (stage == NULL)
         return;
@@ -698,8 +777,11 @@ void Gui::toggle_layout()
     else if (current_layout_ == LAYOUT_OVERLAY)
         set_layout(LAYOUT_PORTRAIT);
     else if (current_layout_ == LAYOUT_PORTRAIT)
+        set_layout(LAYOUT_LIVEFEED_ONLY);
+    else if (current_layout_ == LAYOUT_LIVEFEED_ONLY)
         set_layout(LAYOUT_PLAYBACK_ONLY);
 }
+
 /**
  * Sets the current layout.
  * Also makes some actors visible or not.
@@ -727,6 +809,22 @@ void on_playback_texture_size_changed(ClutterTexture *texture,
         return;
     gui->resize_actors();
 }
+
+void Gui::on_blending_mode_int_property_changed(std::string &name, int value)
+{
+    UNUSED(name);
+    if (value == 1)
+        set_blending_mode(BLENDING_MODE_ADDITIVE);
+    else
+        set_blending_mode(BLENDING_MODE_NORMAL);
+}
+
+void Gui::on_playback_opacity_changed(std::string &name, int value)
+{
+    UNUSED(name);
+    clutter_actor_set_opacity(playback_group_, value);
+}
+
 /**
  * Graphical user interface for Toonloop. 
  *
@@ -740,23 +838,28 @@ Gui::Gui(Application* owner) :
     owner_(owner),
     isFullscreen_(false),
     current_layout_(LAYOUT_SPLITSCREEN),
-    overlay_opacity_(50),
     onionskin_opacity_(50),
     onionskin_enabled_(false),
     enable_info_(false),
     enable_help_(false),
-    fade_duration_ratio_(0.0)
+    crossfade_ratio_(0.0),
+    fps_calculation_timer_(),
+    number_of_frames_in_last_second_(0),
+    rendering_fps_(0),
+    info_window_(owner)
 {
-    //video_xwindow_id_ = 0;
-    owner_->get_controller()->next_image_to_play_signal_.connect(boost::bind(&Gui::on_next_image_to_play, this, _1, _2, _3));
-    owner_->get_controller()->add_frame_signal_.connect(boost::bind(&Gui::on_frame_added, this, _1, _2));
-    //TODO: owner_->get_controller()->no_image_to_play_signals_.connect(boost::bind(&Gui::on_no_image_to_play, this))
+    Controller *controller = owner_->get_controller();
+    controller->next_image_to_play_signal_.connect(boost::bind(&Gui::on_next_image_to_play, this, _1, _2, _3));
+    controller->add_frame_signal_.connect(boost::bind(&Gui::on_frame_added, this, _1, _2));
+    //TODO: controller->no_image_to_play_signals_.connect(boost::bind(&Gui::on_no_image_to_play, this))
     // Main GTK window
     window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     // TODO:2010-08-06:aalex:make window size configurable
     gtk_widget_set_size_request(window_, WINWIDTH, WINHEIGHT); 
     gtk_window_move(GTK_WINDOW(window_), 300, 10); // TODO: make configurable
-    gtk_window_set_title(GTK_WINDOW(window_), "Toonloop " PACKAGE_VERSION);
+    std::string window_title("Toonloop " PACKAGE_VERSION);
+    // TODO: version is "snapshot" if minor number is odd, "git" if micro is odd, "release" otherwise
+    gtk_window_set_title(GTK_WINDOW(window_), window_title.c_str());
     // Set window icon
     fs::path iconPath(std::string(PIXMAPS_DIR) + "/toonloop.png");
     if (fs::exists(iconPath))
@@ -772,7 +875,7 @@ Gui::Gui(Application* owner) :
     g_signal_connect(G_OBJECT(window_), "delete-event", G_CALLBACK(on_delete_event), this);
     g_signal_connect(G_OBJECT(window_), "key-press-event", G_CALLBACK(key_press_event), this);
     g_signal_connect(G_OBJECT(window_), "button-press-event", G_CALLBACK(on_mouse_button_event), this);
-    
+
     // add listener for window-state-event to detect fullscreenness
     g_signal_connect(G_OBJECT(window_), "window-state-event", G_CALLBACK(on_window_state_event), this);
 
@@ -795,30 +898,31 @@ Gui::Gui(Application* owner) :
 
     /* We need to set certain props on the target texture currently for
      * efficient/corrent playback onto the texture (which sucks a bit)  
-    */
+     */
     live_input_texture_ = (ClutterActor *) g_object_new(CLUTTER_TYPE_TEXTURE, 
-        "sync-size", FALSE, 
-        "disable-slicing", TRUE, 
-        NULL);
+            "sync-size", FALSE, 
+            "disable-slicing", TRUE, 
+            NULL);
     g_signal_connect(CLUTTER_TEXTURE(live_input_texture_), "size-change", G_CALLBACK(on_live_input_texture_size_changed), this);
 
     // Playback textures:
     playback_group_ = clutter_group_new();
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(playback_group_));
-    
+
     const unsigned int NUM_PLAYBACK_IMAGES = 30;
     for(unsigned int i = 0 ; i < NUM_PLAYBACK_IMAGES; i++)
     {
         playback_textures_.insert(playback_textures_.begin(), 
-            (ClutterActor*)
-            g_object_new(CLUTTER_TYPE_TEXTURE, 
-                "sync-size", FALSE, 
-                "disable-slicing", TRUE, 
-                NULL));
+                (ClutterActor*)
+                g_object_new(CLUTTER_TYPE_TEXTURE, 
+                    "sync-size", FALSE, 
+                    "disable-slicing", TRUE, 
+                    NULL));
         clutter_container_add_actor(CLUTTER_CONTAINER(playback_group_), CLUTTER_ACTOR(playback_textures_.at(0)));
         // FIXME:2010-09-14:aalex:It's OK to detect playback image change but it should be done at the last minute before drawing each.
         g_signal_connect(CLUTTER_TEXTURE(playback_textures_.at(0)), "size-change", G_CALLBACK(on_playback_texture_size_changed), this);
-        clutter_container_raise_child(CLUTTER_CONTAINER(playback_group_), CLUTTER_ACTOR(playback_textures_.at(0)), NULL);
+        clutter_container_lower_child(CLUTTER_CONTAINER(playback_group_), CLUTTER_ACTOR(playback_textures_.at(0)), NULL);
+        clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(0)), 0);
     }
 
     // Onionskin textures:
@@ -828,18 +932,18 @@ Gui::Gui(Application* owner) :
     for(unsigned int i = 0 ; i < NUM_ONIONSKIN_IMAGES; i++)
     {
         onionskin_textures_.insert(onionskin_textures_.begin(), 
-            (ClutterActor*)
-            g_object_new(CLUTTER_TYPE_TEXTURE, 
-                "sync-size", FALSE, 
-                "disable-slicing", TRUE, 
-                NULL));
+                (ClutterActor*)
+                g_object_new(CLUTTER_TYPE_TEXTURE, 
+                    "sync-size", FALSE, 
+                    "disable-slicing", TRUE, 
+                    NULL));
         clutter_container_add_actor(CLUTTER_CONTAINER(onionskin_group_), CLUTTER_ACTOR(onionskin_textures_.at(0)));
-        clutter_container_raise_child(CLUTTER_CONTAINER(onionskin_group_), CLUTTER_ACTOR(onionskin_textures_.at(0)), NULL);
+        clutter_container_lower_child(CLUTTER_CONTAINER(onionskin_group_), CLUTTER_ACTOR(onionskin_textures_.at(0)), NULL);
     }
 
     // Background color:
-    ClutterColor stage_color = { 0x00, 0x00, 0x00, 0xff };
-    clutter_stage_set_color(CLUTTER_STAGE(stage_), &stage_color);
+    ClutterColor black = { 0x00, 0x00, 0x00, 0xff };
+    clutter_stage_set_color(CLUTTER_STAGE(stage_), &black);
 
     /* Create a timeline to manage animation */
     timeline_ = clutter_timeline_new(6000); // time here doesn't matter
@@ -852,27 +956,54 @@ Gui::Gui(Application* owner) :
     /* of course, we need to show the texture in the stage. */
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(live_input_texture_));
     clutter_actor_hide_all(CLUTTER_ACTOR(live_input_texture_));
-    
+
     // INFO TEXT
-    info_text_actor_ = clutter_text_new_full("Sans 16px", "", clutter_color_new(255, 255, 255, 255));
+
+    ClutterColor white = { 0xff, 0xff, 0xff, 0xff };
+    info_text_actor_ = clutter_text_new_full("Sans semibold 16px", "", &white);
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(info_text_actor_));
     // HELP TEXT
     std::string HELP_TEXT(INTERACTIVE_HELP + "(Press F1 to hide)");
-    help_text_actor_ = clutter_text_new_full("Sans 12px", HELP_TEXT.c_str(), clutter_color_new(255, 255, 255, 255));
+    help_text_actor_ = clutter_text_new_full("Sans semibold 12px", HELP_TEXT.c_str(), &white);
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(help_text_actor_));
+
+    // black out
+    black_out_rectangle_ = clutter_rectangle_new_with_color(&black);
+    clutter_actor_hide(black_out_rectangle_);
+    clutter_container_add_actor(CLUTTER_CONTAINER(stage_), black_out_rectangle_);
+
     // Sort actors and groups:
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(playback_group_), NULL);
+    clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(live_input_texture_), NULL);
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(onionskin_group_), NULL);
+    clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(black_out_rectangle_), NULL);
+    // The image on top, if set:
+    if (owner_->get_configuration()->should_show_image_on_top())
+    {
+        // TODO: move this somewhere else
+        std::string image_on_top_path = owner_->get_configuration()->get_image_on_top();
+        if (! fs::exists(image_on_top_path))
+            std::cout << "No such file: " << image_on_top_path << std::endl;
+        else 
+        {
+            ClutterActor *image_on_top = clutter_texture_new_from_file(image_on_top_path.c_str(), NULL);
+            clutter_container_add_actor(CLUTTER_CONTAINER(stage_), image_on_top);
+        }
+    }
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(info_text_actor_), NULL);
-  
+    clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(help_text_actor_), NULL);
+
+    if (owner_->get_configuration()->get_info_window_enabled())
+        info_window_.create();
+
     /* Only show the actors after parent show otherwise it will just be
      * unrealized when the clutter foreign window is set. widget_show
      * will call show on the stage.
      */
     gtk_widget_show_all(window_);
-    
+
     // Set visibility for other things
-    enable_onionskin(false); // hides it
+    enable_onionskin(false);
     clutter_actor_hide(info_text_actor_);
     clutter_actor_hide(help_text_actor_);
     // shown when we get first live image size, and we play the first image
@@ -881,20 +1012,94 @@ Gui::Gui(Application* owner) :
     // Makes fullscreen if needed
     if (owner_->get_configuration()->get_fullscreen())
         toggleFullscreen(window_);
+    // add properties:
+    controller->add_int_property("blending_mode", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_blending_mode_int_property_changed, this, _1, _2));
+    controller->add_float_property("crossfade_ratio", 0.0)->value_changed_signal_.connect(boost::bind(&Gui::on_crossfade_ratio_changed, this, _1, _2));
+    controller->add_int_property("livefeed_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_livefeed_opacity_changed, this, _1, _2));
+    controller->add_int_property("black_out", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_changed, this, _1, _2));
+    controller->add_int_property("black_out_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_opacity_changed, this, _1, _2));
+    controller->add_int_property("playback_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_playback_opacity_changed, this, _1, _2));
+
+    // saturation effect:
+    clutter_actor_set_name(playback_group_, "playback_group_");
+    clutter_actor_set_name(live_input_texture_, "live_input_texture_");
+    clutter_actor_set_name(onionskin_group_, "onionskin_group_");
+    
+    if (owner_->get_configuration()->get_shaders_enabled())
+    {
+        saturation_effect_.reset(new BrCoSaEffect(controller));
+        saturation_effect_->add_actor(playback_group_);
+        saturation_effect_->add_actor(live_input_texture_);
+        saturation_effect_->add_actor(onionskin_group_);
+        saturation_effect_->update_all_actors();
+    }
+}
+
+void Gui::on_black_out_opacity_changed(std::string &name, int value)
+{
+    if (owner_->get_configuration()->get_verbose())
+        g_print("make black_out opacity %d\n", value);
+    UNUSED(name);
+    clutter_actor_set_opacity(black_out_rectangle_, value);
+}
+
+void Gui::on_black_out_changed(std::string &name, int value)
+{
+    if (owner_->get_configuration()->get_verbose())
+        g_print("toggle black_out %d\n", value);
+    UNUSED(name);
+    if (value == 0)
+        clutter_actor_hide(black_out_rectangle_);
+    else
+        clutter_actor_show(black_out_rectangle_);
+}
+
+std::string Gui::get_layout_name(layout_number layout)
+{
+    switch (layout)
+    {
+        case LAYOUT_SPLITSCREEN:
+            return std::string("splitscreen");
+            break;
+        case LAYOUT_OVERLAY:
+            return std::string("overlay");
+            break;
+        case LAYOUT_PLAYBACK_ONLY:
+            return std::string("playback_only");
+            break;
+        case LAYOUT_PORTRAIT:
+            return std::string("portrait");
+            break;
+        case LAYOUT_LIVEFEED_ONLY:
+            return std::string("live_feed");
+            break;
+        default:
+            return std::string("unknown");
+            break;
+    }
 }
 
 void Gui::update_info_text()
 {
+    static const bool isUnstable = PACKAGE_VERSION_MINOR % 2 == 1;
+    static const bool isGit = PACKAGE_VERSION_MICRO != 0;
     std::ostringstream os;
     Clip* current_clip = owner_->get_current_clip();
-    os << "Toonloop " << PACKAGE_VERSION << " info (press i to hide)" << std::endl;
+    os << "Toonloop " << PACKAGE_VERSION << 
+        (isUnstable ? " (UNSTABLE) " : "") << 
+        (isGit ? "(Git)" : "") << std::endl << std::endl <<
+        "Press i to hide info" << std::endl;
+    os << "OpenGL rendering rate: " << rendering_fps_ << " FPS" << std::endl;
+    os << "Layout: " << get_layout_name(current_layout_);
+    os << std::endl;
+    os << std::endl;
     os << "Current clip: " << current_clip->get_id() << std::endl;
+    os << "Direction: " << current_clip->get_direction() << std::endl;
     os << "FPS: " << current_clip->get_playhead_fps() << std::endl;
     os << "Playhead: " << current_clip->get_playhead() << std::endl;
     os << "Writehead: " << current_clip->get_writehead() << "/" << current_clip->size() << std::endl;
     os << "Intervalometer rate: " << current_clip->get_intervalometer_rate() << std::endl;
     os << "Intervalometer enabled:" << owner_->get_pipeline()->get_intervalometer_is_on() << std::endl;
-    os << "Layout:" << current_layout_ << std::endl;
     clutter_text_set_text(CLUTTER_TEXT(info_text_actor_), os.str().c_str());
 }
 
@@ -909,6 +1114,52 @@ ClutterActor* Gui::get_live_input_texture() const
     return live_input_texture_;
 }
 
+static void set_blending_mode_for_texture(ClutterTexture *texture, const gchar *blend)
+{
+    CoglHandle material = clutter_texture_get_cogl_material(texture);
+    GError *error = NULL;
+#if CLUTTER_CHECK_VERSION(1, 4, 0)
+    gboolean success = cogl_material_set_blend(COGL_MATERIAL(material), blend, &error);
+#else
+    gboolean success = cogl_material_set_blend(material, blend, &error);
+#endif
+
+    if (error)
+    {
+        g_critical("Error setting blend: %s\n", error->message);
+        g_error_free(error);
+    }
+    if (! success)
+    {
+        g_critical("Could not set blend mode");
+    }
+}
+
+void Gui::set_blending_mode(BlendingMode mode)
+{
+    static const gchar *NORMAL_BLEND_MODE = "RGBA = ADD (SRC_COLOR * (SRC_COLOR[A]), DST_COLOR * (1-SRC_COLOR[A]))";
+    static const gchar *ADD_BLEND_MODE = "RGBA = ADD (SRC_COLOR * (SRC_COLOR[A]), DST_COLOR)";
+    if (mode == blending_mode_)
+        return;
+    const gchar *blend;
+    blending_mode_ = mode;
+    switch (blending_mode_)
+    { 
+        case BLENDING_MODE_NORMAL:
+            blend = NORMAL_BLEND_MODE;
+            break;
+        case BLENDING_MODE_ADDITIVE:
+            blend = ADD_BLEND_MODE;
+            break;
+    } 
+    // set mode for all textures:
+    set_blending_mode_for_texture(CLUTTER_TEXTURE(live_input_texture_), blend);
+    for (ActorIterator iter = playback_textures_.begin(); iter != playback_textures_.end(); ++iter)
+        set_blending_mode_for_texture(CLUTTER_TEXTURE(*iter), blend);
+    for (ActorIterator iter = onionskin_textures_.begin(); iter != onionskin_textures_.end(); ++iter)
+        set_blending_mode_for_texture(CLUTTER_TEXTURE(*iter), blend);
+}
+
 Gui::~Gui()
 {
     //std::cout << "~Gui" << std::endl;
@@ -920,5 +1171,21 @@ Gui::~Gui()
         //ClutterActor* tmp = playback_textures_.back();
         playback_textures_.pop_back();
         //g_print("TODO: clutter destroy texture\n");
+    }
+}
+
+std::string Gui::get_blending_mode_name(BlendingMode mode)
+{
+    switch (mode)
+    {
+        case BLENDING_MODE_ADDITIVE:
+            return std::string("additive");
+            break;
+        case BLENDING_MODE_NORMAL:
+            return std::string("normal");
+            break;
+        default: 
+            return std::string("unknown");
+            break;
     }
 }

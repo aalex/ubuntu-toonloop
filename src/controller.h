@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +29,11 @@
 #include <boost/signals2.hpp>
 #include <string>
 #include "clip.h" // for clip_direction enum
+#include "properties.h"
+#include "property.h"
+
+typedef Property<int> IntProperty;
+typedef Property<float> FloatProperty;
 
 // Forward declaration
 class Application;
@@ -45,8 +49,50 @@ class Application;
 class Controller
 {
     public:
-        //FIXME: does this member need to be public?
+        /**
+         * Constructor.
+         */
         Controller(Application* owner);
+        /**
+         * Hash table of int properties. 
+         * Should be used more in future.
+         */
+        Properties<int> int_properties_;
+        /**
+         * Hash table of float properties. 
+         * Should be used more in future.
+         */
+        Properties<float> float_properties_;
+        /**
+         * Creates a new named int property.
+         * Returns a pointer to it, so that clients can query its value and register slots for their signals.
+         */
+        Property<int> *add_int_property(const std::string &name, int value);
+        /**
+         * Creates a new named float property.
+         * Returns a pointer to it, so that clients can query its value and register slots for their signals.
+         */
+        Property<float> *add_float_property(const std::string &name, float value);
+        /** 
+         * Sets the value of a int property, given its name. 
+         * Returns whether is succeeded or not.
+         */
+        bool set_int_value(const std::string &name, int value);
+        /** 
+         * Sets the value of a float property, given its name. 
+         * Returns whether is succeeded or not.
+         */
+        bool set_float_value(const std::string &name, float value);
+        /**
+         * Returns the value of a named int property.
+         * Returns 0 if it doesn't exist.
+         */
+        int get_int_value(const std::string &name);
+        /**
+         * Returns the value of a named float property.
+         * Returns 0.0 if it doesn't exist.
+         */
+        float get_float_value(const std::string &name);
         /** 
          * Called when a frame is added to a clip.
          * Arguments: clip number, new frame number.
@@ -73,8 +119,6 @@ class Controller
          */
         //TODO: make the string &const
         boost::signals2::signal<void (unsigned int, std::string)> save_clip_signal_;
-
-
         /**
          * Called when it's time to play the next image.
          *
@@ -91,36 +135,28 @@ class Controller
          * Arguments: clip number, string direction. (FORWARD, BACKWARD, YOYO)
          */
         boost::signals2::signal<void (unsigned int, std::string)> clip_direction_changed_signal_;
-
         /** 
          * Called when a clip is cleared of all its images.
          * Argument: clip number
          */
         boost::signals2::signal<void (unsigned int)> clip_cleared_signal_;
-
-
         /**
          * Called when the auto video grabbing of every frame is toggled.
          * Arguments: clip number, autograb is enabled
          */
         boost::signals2::signal<void (unsigned int, bool)>clip_videograb_changed_signal_;
-
-
         /**
          * Called when a clip's intervalometer rate is changed. 
          *
          * Arguments: clip number, rate in seconds.
          */
         boost::signals2::signal<void (unsigned int, float)> intervalometer_rate_changed_signal_;
-
         /**
          * Called when a clip's intervalometer is enabled or not.
          *
          * Arguments: clip number, intervalometer is enabled.
          */
         boost::signals2::signal<void (unsigned int, bool)> intervalometer_toggled_signal_;
-
-
         // TODO: the writehead_moved_signal_ should be triggered when we add or remove an image.
         /**
          * Called when the writehead position changes
@@ -160,7 +196,6 @@ class Controller
          * Triggers the save_clip_signal_
          */
         void save_current_clip();
-        
         /**
          * Checks if it's time to update the playback image
          * and iterate the playhead.
@@ -168,12 +203,10 @@ class Controller
          * Times the playhead and iterate it if it's time to.
          */
         void update_playback_image();
-
         /**
          * Increases the FPS of the current clip's playhead.
          */
         void increase_playhead_fps();
-
         /**
          * Decreases the FPS of the current clip's playhead.
          */
@@ -194,14 +227,13 @@ class Controller
          *
          * Triggers the clip_direction_changed_signal_
          */
-        void set_current_clip_direction(clip_direction direction);
+        void set_current_clip_direction(const std::string &direction);
         /**
          * Clears the current clip of all its images.
          *
          * Triggers the clip_cleared_signal_
          */
         void clear_current_clip();
-
         /**
          * Toggles on/off the grabbing of every consecutive frame.
          *
@@ -276,6 +308,16 @@ class Controller
          * Triggers the writehead_moved_signal_
          */
         void move_writehead_to(unsigned int position);
+
+        /**
+         * Quits the application.
+         */
+        void quit();
+
+        /**
+         * Prints all the Toonloop properties.
+         */
+        void print_properties();
 
     private:
         Application* owner_;
