@@ -1,3 +1,9 @@
+toonloop (2.1.6-1) lucid; urgency=low
+
+  * New upstream release.
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Sun, 16 Jan 2011 03:00:23 -0500
+
 toonloop (2.0.4-2) lucid; urgency=low
 
   * Not installing bash-completion files in /etc anymore.
