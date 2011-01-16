@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,43 +20,63 @@
 
 #include "clip.h"
 #include "configuration.h"
+#include "playheaditerator.h"
 #include "image.h"
 #include "timing.h"
 #include <boost/filesystem.hpp>
-#include <string>
-#include <iostream>
-#include <tr1/memory>
 #include <boost/thread/mutex.hpp>
+#include <glib.h>
+#include <iostream>
+#include <string>
+#include <tr1/memory>
 
 //typedef std::vector< std::tr1::shared_ptr<Image> >::iterator ImageIterator;
 namespace fs = boost::filesystem;
+typedef std::map<std::string, std::tr1::shared_ptr<PlayheadIterator> >::iterator PlayheadIteratorIterator;
 
-// FIXME: vector is not thread safe. You need to protect it with a mutex or such.
 /** Each clip needs a unique ID.
  */
 Clip::Clip(unsigned int id)
 {
-    // FIXME: How to use a 2-int vector?
-    //intervalometer_rate_(1, 1); // default: 1 FPS
-    //fps_(12, 1); // default: 12 FPS
     id_ = id;
     writehead_ = 0;
     playhead_ = 0;
     playhead_fps_ = 12; // some default for now
     has_recorded_a_frame_ = false;
-    direction_ = DIRECTION_FORWARD;
-    yoyo_sub_direction_ = DIRECTION_FORWARD;
     last_time_grabbed_image_ = timing::get_timestamp_now();
     intervalometer_rate_ = 10.0f; // 10 seconds is a reasonable default for a timelapse
-    //mutex_;
+    
+    current_playhead_direction_ = std::string("invalid");
+    init_playhead_iterators();
+}
+/**
+ * Populates the map of playhead iterator objects.
+ */
+void Clip::init_playhead_iterators()
+{
+    PlayheadIterator *tmp = new ForwardIterator();
+    current_playhead_direction_ = tmp->get_name();
+    playhead_iterators_[tmp->get_name()] = std::tr1::shared_ptr<PlayheadIterator>(tmp);
+    
+    tmp = new BackwardIterator();
+    playhead_iterators_[tmp->get_name()] = std::tr1::shared_ptr<PlayheadIterator>(tmp);
+    
+    tmp = new YoyoIterator();
+    playhead_iterators_[tmp->get_name()] = std::tr1::shared_ptr<PlayheadIterator>(tmp);
+    
+    tmp = new RandomIterator();
+    playhead_iterators_[tmp->get_name()] = std::tr1::shared_ptr<PlayheadIterator>(tmp);
+    
+    tmp = new DrunkIterator();
+    playhead_iterators_[tmp->get_name()] = std::tr1::shared_ptr<PlayheadIterator>(tmp);
 }
 
-void Clip::set_intervalometer_rate(const float rate)
+void Clip::set_intervalometer_rate(float rate)
 {
     intervalometer_rate_ = rate;
 }
 
-void Clip::set_last_time_grabbed_image(const long timestamp)
+void Clip::set_last_time_grabbed_image(long timestamp)
 {
     last_time_grabbed_image_ = timestamp;
 }
@@ -252,53 +271,24 @@ unsigned int Clip::get_writehead() const
 unsigned int Clip::iterate_playhead()
 {
     unsigned int len = size();
-    if (len == 0)
+    if (len <= 1)
         playhead_ = 0;
     else 
-    {
-        // clip has at leat 1 of length
-        switch (direction_)
-        {
-            case DIRECTION_FORWARD:
-                if (playhead_ >= len - 1)
-                    playhead_ = 0;
-                else 
-                    ++playhead_;
-                break;
-            case DIRECTION_BACKWARD:
-                if (playhead_ == 0)
-                    playhead_ = len - 1;
-                else 
-                    --playhead_;
-                break;
-                // a slightly more complex type is the yoyo:
-            case DIRECTION_YOYO:
-                if (yoyo_sub_direction_ == DIRECTION_BACKWARD)
-                {
-                    if (playhead_ == 0)
-                    {
-                        playhead_ = 1;
-                        yoyo_sub_direction_ = DIRECTION_FORWARD;
-                    } else 
-                        --playhead_;
-                } 
-                else 
-                {
-                    if (playhead_ >= len - 1)
-                    {
-                        if (len == 1)
-                            playhead_ = 0;
-                        else
-                            playhead_ = len - 2;
-                        yoyo_sub_direction_ = DIRECTION_BACKWARD;
-                    } 
-                    else 
-                        ++playhead_;
-                }
-                break;
-        } // switch
-    } // else
+        playhead_ = playhead_iterators_[current_playhead_direction_].get()->iterate(playhead_, len);
     return playhead_;
+}
+
+bool Clip::set_direction(const std::string &direction)
+{
+    PlayheadIteratorIterator iter;
+    iter = playhead_iterators_.find(direction);
+    if (iter != playhead_iterators_.end())
+    {
+        current_playhead_direction_ = direction;
+        return true;
+    }
+    else
+        return false;
 }
 
 unsigned int Clip::size() const
@@ -331,7 +321,7 @@ Image* Clip::get_image(unsigned int index) const
     {
         // Aug 25 2010:tmatth:FIXME we should actually prevent callers' 
         // logic from trying to get invalid framenumbers
-        std::cerr << "Clip::get_image: Got exception " << e.what() << std::endl;
+        std::cerr << "Clip::get_image(" << index << "): Got exception " << e.what() << std::endl;
         return 0;
     }
 }
@@ -405,5 +395,18 @@ void Clip::remove_image_file(unsigned int index)
         else
             std::cout << "File " << file_name << " does not exist!" << std::endl;
     }
+}
+/**
+ * Chooses the next playhead direction.
+ */
+void Clip::change_direction()
+{
+    std::string current = get_direction();
+    
+    PlayheadIteratorIterator iter = playhead_iterators_.find(current);
+    iter++;
+    if (iter == playhead_iterators_.end())
+        iter = playhead_iterators_.begin();
+    set_direction((*iter).first);
 }
 

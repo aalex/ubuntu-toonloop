@@ -1,5 +1,10 @@
+TESTS = check_properties
+SUBDIRS = shaders
 bin_PROGRAMS = toonloop
 EXTRA_DIST = doxyfile.in
+
+noinst_PROGRAMS = check_properties
+check_properties_SOURCES = properties.h property.h check_properties.cpp
 
 html-local: doxygen
 doxygen:
@@ -7,26 +12,31 @@ doxygen:
 clean-local:
 	rm -rf html
 
-# noinst_PROGRAMS = 
-# FIXME: We should not add all the .h files here
-
 headers = \
 	application.h \
 	clip.h \
+	command.h \
 	concurrentqueue.h \
 	config.h \
 	configuration.h \
 	controller.h \
+    effect.h \
 	gui.h \
+    glslang.h \
 	image.h \
+    infowindow.h \
 	log.h \
-	message.h \
-	midi.h \
+	midiinput.h \
 	moviesaver.h \
     oscinterface.h \
     oscreceiver.h \
     oscsender.h \
 	pipeline.h \
+    playheaditerator.h \
+	property.h \
+	properties.h \
+	midibinder.h \
+    brcosaeffect.h \
 	saverworker.h \
 	statesaving.h \
 	subprocess.h \
@@ -38,14 +48,21 @@ headers = \
 toonloop_SOURCES = \
 	application.cpp \
 	clip.cpp \
+	command.cpp \
 	configuration.cpp \
 	controller.cpp \
+    effect.cpp \
 	gui.cpp \
+    glslang.cpp \
 	image.cpp \
+    infowindow.cpp \
 	main.cpp \
-	midi.cpp \
+	midiinput.cpp \
 	moviesaver.cpp \
 	pipeline.cpp \
+    playheaditerator.cpp \
+    midibinder.cpp \
+    brcosaeffect.cpp \
 	saverworker.cpp \
 	statesaving.cpp \
 	subprocess.cpp \
@@ -65,9 +82,7 @@ toonloop_CXXFLAGS = \
 	$(LIBLO_CFLAGS) \
 	$(LIBM_CXXFLAGS) \
 	$(LIBTHREAD_CXXFLAGS) \
-	$(STK_CXXFLAGS) \
-	$(CXXFLAGS) \
-	-DPIXMAPS_DIR=\"$(PIXMAPS_DIR)\"
+	$(STK_CXXFLAGS)
  
 toonloop_LDADD = \
 	$(BOOST_FILESYSTEM_LIB) \
@@ -82,4 +97,3 @@ toonloop_LDADD = \
 	$(LIBTHREAD_LIBS) \
 	$(LDFLAGS) \
 	$(STK_LIBS)
-

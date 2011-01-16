@@ -1108,6 +1108,7 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([m4/as-ac-expand.m4])
+m4_include([m4/as-version.m4])
 m4_include([m4/ax_boost_base.m4])
 m4_include([m4/ax_boost_date_time.m4])
 m4_include([m4/ax_boost_filesystem.m4])

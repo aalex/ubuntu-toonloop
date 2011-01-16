@@ -1,0 +1,101 @@
+<!-- default MIDI bindings for Toonloop -->
+<!-- you can override those. Put the file in ~/.toonloop/midi.xml -->
+<toonloop_midi_rules>
+    <!-- Grab frame  -->
+    <!--<control_on  number="80" action="add_image" /> -->
+    <control_on  number="64" action="add_image" />
+    
+    <!-- Video grab -->
+    <!--
+    <control_on  number="64" action="video_record_on" />
+    <control_off number="64" action="video_record_off" />
+    -->
+
+    <!-- Notes: select_clip -->
+    <note_on number="41" action="select_clip" args="0" />
+    <note_on number="42" action="select_clip" args="1" />
+    <note_on number="43" action="select_clip" args="2" />
+    <note_on number="44" action="select_clip" args="3" />
+    <note_on number="45" action="select_clip" args="4" />
+    <note_on number="46" action="select_clip" args="5" />
+    <note_on number="47" action="select_clip" args="6" />
+    <note_on number="48" action="select_clip" args="7" />
+    <note_on number="49" action="select_clip" args="8" />
+    <note_on number="50" action="select_clip" args="9" />
+
+    <note_on number="51" action="select_clip" args="10" />
+    <note_on number="52" action="select_clip" args="11" />
+    <note_on number="53" action="select_clip" args="12" />
+    <note_on number="54" action="select_clip" args="13" />
+    <note_on number="55" action="select_clip" args="14" />
+    <note_on number="56" action="select_clip" args="15" />
+    <note_on number="57" action="select_clip" args="16" />
+    <note_on number="58" action="select_clip" args="17" />
+    <note_on number="59" action="select_clip" args="18" />
+    <note_on number="60" action="select_clip" args="19" />
+
+    <note_on number="61" action="select_clip" args="20" />
+    <note_on number="62" action="select_clip" args="21" />
+    <note_on number="63" action="select_clip" args="22" />
+    <note_on number="64" action="select_clip" args="23" />
+    <note_on number="65" action="select_clip" args="24" />
+    <note_on number="66" action="select_clip" args="25" />
+    <note_on number="67" action="select_clip" args="26" />
+    <note_on number="68" action="select_clip" args="27" />
+    <note_on number="69" action="select_clip" args="28" />
+    <note_on number="70" action="select_clip" args="29" />
+
+    <note_on number="71" action="select_clip" args="30" />
+    <note_on number="72" action="select_clip" args="31" />
+
+    <!-- Program change: select_clip -->
+    <program_change action="select_clip" />
+
+    <!-- Crossfade ratio (7 is main volume) -->
+    <!--
+    <control_map number="7" action="set_float" args="crossfade_ratio" from="0.0" to="10.0" />
+    -->
+
+    <!--
+    Knobs for the Edirol PCR-M30
+    -->
+    <control_map number="38" action="set_int" args="livefeed_opacity" from="0" to="255" />
+    <control_map number="76" action="set_float" args="crossfade_ratio" from="0.0" to="10.0" />
+    <control_map number="71" action="set_float" args="fx.brcosa.saturation" from="0.0" to="2.0" />
+    <control_map number="74" action="set_float" args="fx.brcosa.contrast" from="0.0" to="2.0" />
+    <!--<control_map number="76" action="set_int" args="black_out_opacity" from="0" to="255" />-->
+    <control_map number="10" action="set_int" args="playback_opacity" from="0" to="255" />
+    <!--
+    <control_map number="74" />
+    <control_map number="71" />
+    <control_map number="76" />
+    <control_map number="76" />
+    <control_map number="77" />
+    <control_map number="78" />
+    <control_map number="6" />
+    <control_map number="38" />
+    <control_map number="10" />
+    -->
+    
+    <!-- 
+    Sliders for the Edirol PCR-M30
+    <control_map number="5" />
+    <control_map number="????" />
+    <control_map number="73" />
+    <control_map number="75" />
+    <control_map number="72" />
+    <control_map number="93" />
+    <control_map number="91" />
+    <control_map number="7" />
+    -->
+    
+    <!-- Note 72: reset current clip -->
+    <!-- <note_on number="72" action="reset" /> -->
+
+    <!-- pitch bend! -->
+    <!--
+    <pitch_bend action="set_float" args="latency_adjust" from="-10.0" to="10.0" /> 
+    --> 
+    <!-- latency_adjust is TODO -->
+
+</toonloop_midi_rules>

@@ -1,9 +1,8 @@
 /*
  * Toonloop
  *
- * Copyright 2010 Alexandre Quessy
- * <alexandre@quessy.net>
- * http://www.toonloop.com
+ * Copyright (c) 2010 Alexandre Quessy <alexandre@quessy.net>
+ * Copyright (c) 2010 Tristan Matthews <le.businessman@gmail.com>
  *
  * Toonloop is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,24 +27,24 @@
 #include <gtk/gtk.h>
 #include <iostream>
 #include <string>
+#include <tr1/memory>
 
 #include "application.h"
 #include "controller.h"
-#include "message.h"
 #include "moviesaver.h"
 #include "oscinterface.h"
 #include "clip.h"
 #include "config.h"
 #include "configuration.h"
 #include "gui.h"
-#include "midi.h"
+#include "midiinput.h"
 #include "pipeline.h"
 #include "subprocess.h"
 #include "v4l2util.h"
 
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
-typedef std::tr1::unordered_map<int, Clip*>::iterator ClipIterator;
+typedef std::tr1::unordered_map<int, std::tr1::shared_ptr<Clip> >::iterator ClipIterator;
 
 /**
  * Checks if a directory exists, create it and its parent directories if not.
@@ -88,15 +87,29 @@ Application::Application() :
 {
     // FIXME:2010-08-05:aalex:We should not create clips at startup like that.
     // They should be created on-demand
+    using std::tr1::shared_ptr;
     for (unsigned int i = 0; i < MAX_CLIPS; i++)
-        clips_[i] = new Clip(i);
+        clips_[i] = shared_ptr<Clip>(new Clip(i));
 }
 
+// TODO:2010-12-18:aalex:Should we return shared_ptr<Clip>, not Clip*?
 Clip* Application::get_current_clip()
 {
-    return clips_[selected_clip_];
+    return clips_[selected_clip_].get();
 }
 
+Clip* Application::get_clip(unsigned int clip_number)
+{
+    if (clip_number > (clips_.size() - 1))
+    {
+        g_critical("Tried to get_clip %d", clip_number);
+        return 0;
+    }
+    else 
+    {
+        return clips_[clip_number].get();
+    }
+}
 unsigned int Application::get_current_clip_number()
 {
     return selected_clip_;
@@ -104,11 +117,16 @@ unsigned int Application::get_current_clip_number()
 
 /** Should be called only via calling the Controller::choose_clip method.
  */
-void Application::set_current_clip_number(unsigned int clipnumber)
+void Application::set_current_clip_number(unsigned int clip_number)
 {
-    selected_clip_ = clipnumber;
-    if (config_->get_verbose())
-        std::cout << "current clip is " << selected_clip_ << std::endl;
+    if (clip_number > (clips_.size() - 1))
+        g_critical("Tried to set_current_clip_number to %d", clip_number);
+    else 
+    {
+        selected_clip_ = clip_number;
+        if (config_->get_verbose())
+            std::cout << "current clip is " << selected_clip_ << std::endl;
+    }
 }
 
 static void check_for_mencoder()
@@ -118,6 +136,7 @@ static void check_for_mencoder()
     if (! ret)
         g_critical("Could not find mencoder\n");
 }
+
 /**
  * Parses the command line and runs the application.
  */
@@ -131,16 +150,8 @@ void Application::run(int argc, char *argv[])
         ("project-home,H", po::value<std::string>()->default_value(project_home), "Path to the saved files")
         ("version", "Show program's version number and exit")
         ("verbose,v", po::bool_switch(), "Enables a verbose output")
-        //("enable-effects,e", po::bool_switch(), "Enables the GLSL effects")
-        //("intervalometer-on,i", po::bool_switch(), "Enables the intervalometer to create time lapse animations")
-        //("intervalometer-interval,I", po::value<double>()->default_value(5.0), "Sets the intervalometer rate in seconds")
-        //("project-name,p", po::value<std::string>()->default_value("default"), "Sets the name of the project for image saving")
         ("display,D", po::value<std::string>()->default_value(std::getenv("DISPLAY")), "Sets the X11 display name")
-        //("rendering-fps", po::value<int>()->default_value(30), "Rendering frame rate") // FIXME: can we get a FPS different for the rendering?
-        //("capture-fps,r", po::value<int>()->default_value(30), "Rendering frame rate")
         ("playhead-fps", po::value<int>()->default_value(12), "Sets the initial playback rate of clips")
-        //("image-width,w", po::value<int>()->default_value(640), "Width of the images grabbed from the camera. Default is 640")
-        //("image-height,y", po::value<int>()->default_value(480), "Height of the images grabbed from the camera. Default is 480")
         ("fullscreen,f", po::bool_switch(), "Runs in fullscreen mode")
         ("video-source,d", po::value<std::string>()->default_value(video_source), "Sets the video source or device. Use \"test\" for color bars. Use \"x\" to capture the screen")
         ("midi-input,m", po::value<int>(), "Sets the input MIDI device number to open")
@@ -153,16 +164,21 @@ void Application::run(int argc, char *argv[])
         ("width", po::value<int>()->default_value(DEFAULT_CAPTURE_WIDTH), "Image capture width")
         ("height", po::value<int>()->default_value(DEFAULT_CAPTURE_HEIGHT), "Image capture height")
         ("max-images-per-clip", po::value<int>()->default_value(0), "If not zero, sets a maximum number of images per clip. The first image is then removed when one is added.")
-        ("enable-intervalometer", po::bool_switch(), "Enables the intervalometer for the default clip at startup.")
-        ("intervalometer-rate", po::value<float>()->default_value(10.0), "Sets the default intervalometer rate.")
+        ("enable-intervalometer,i", po::bool_switch(), "Enables the intervalometer for the default clip at startup.")
+        ("intervalometer-rate,I", po::value<float>()->default_value(10.0), "Sets the default intervalometer rate.")
         ("layout", po::value<unsigned int>()->default_value(0), "Sets the layout number.") // TODO:2010-10-05:aalex:Print the NUM_LAYOUTS
         ("remove-deleted-images", po::bool_switch(), "Enables the removal of useless image files.")
-        ; // <-- important semi-colon
+        ("enable-shaders,S", po::bool_switch(), "Enables GLSL shader effects.")
+        ("enable-info-window,I", po::bool_switch(), "Enables a window for information text.")
+        ("image-on-top", po::value<std::string>()->default_value(""), "Shows an unscaled image on top of all.")
+        ("enable-preview-window", po::bool_switch(), "Enables a preview of the live camera feed.")
+        ("print-properties", po::bool_switch(), "Prints a list of the Toonloop properties once running.")
+        ;
     po::variables_map options;
     
     po::store(po::parse_command_line(argc, argv, desc), options);
     po::notify(options);
-
+    
     // tmp: 
     bool verbose = options["verbose"].as<bool>();
     // Options that makes the program exit:
@@ -187,7 +203,7 @@ void Application::run(int argc, char *argv[])
     }
     if (options["list-midi-inputs"].as<bool>())
     {
-        MidiInput tmp_midi_input(this); 
+        MidiInput tmp_midi_input(this, verbose); 
         tmp_midi_input.enumerate_devices();
         return; 
     }
@@ -217,7 +233,6 @@ void Application::run(int argc, char *argv[])
             std::cout << "project-home is set to " << project_home << std::endl;
         if (! setup_project_home(project_home))
             exit(1);
-
     }
     // FIXME: From there, the options are set in configuration.cpp
     // TODO: We should do this in only one place. 
@@ -232,7 +247,7 @@ void Application::run(int argc, char *argv[])
     if (options.count("playhead-fps"))
     { 
         for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
-            iter->second->set_playhead_fps(options["playhead-fps"].as<int>());
+            iter->second.get()->set_playhead_fps(options["playhead-fps"].as<int>());
     }
 
     if (options["fullscreen"].as<bool>())
@@ -327,10 +342,14 @@ void Application::run(int argc, char *argv[])
         std::cout << "Starting pipeline." << std::endl;
     pipeline_.reset(new Pipeline(this));
     // Start MIDI
-    // std::cout << "Starting MIDI input." << std::endl;
-    midi_input_.reset(new MidiInput(this));
     if (verbose)
+        std::cout << "Starting MIDI input." << std::endl;
+    midi_input_.reset(new MidiInput(this, verbose));
+    if (verbose)
+    {
         midi_input_->enumerate_devices();
+        midi_input_->set_verbose(true);
+    }
     if (config_->get_midi_input_number() != MIDI_INPUT_NONE)
     {
         bool midi_ok = midi_input_->open(config_->get_midi_input_number());
@@ -340,42 +359,65 @@ void Application::run(int argc, char *argv[])
             std::cout << "MIDI: Failed to open port " << config_->get_midi_input_number() << std::endl;
     }
     // Sets the intervalometer stuff.
+    if (verbose)
+        std::cout << "Set the default intervalometer rate" << std::endl;
     for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
-        iter->second->set_intervalometer_rate(config_->get_default_intervalometer_rate());
+        iter->second.get()->set_intervalometer_rate(config_->get_default_intervalometer_rate());
     if (options["enable-intervalometer"].as<bool>())
+    {
+        if (verbose)
+            std::cout << "starting the intervalometer" << std::endl;
         get_controller()->toggle_intervalometer();
+    }
 
     // Sets the remove_deleted_images thing
     for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
-        iter->second->set_remove_deleted_images(config_->get_remove_deleted_images());
+        iter->second.get()->set_remove_deleted_images(config_->get_remove_deleted_images());
+
+    // Clip size must be inherited...
+    for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
+    {
+        iter->second.get()->set_width(config_->get_capture_width());
+        iter->second.get()->set_height(config_->get_capture_height());
+    }
     // Choose layout
     unsigned int layout = options["layout"].as<unsigned int>();
     if (layout < NUM_LAYOUTS)
         gui_->set_layout((Gui::layout_number) layout);
     else
         std::cout << "There is no layout number " << layout << ". Using 0." << std::endl;
+    if (verbose)
+        std::cout << "Check for mencoder" << std::endl;
+    check_for_mencoder();
     // Run the main loop
     if (verbose)
         std::cout << "Running toonloop" << std::endl;
+
+    if (options["print-properties"].as<bool>())
+    {
+        get_controller()->print_properties();
+        // not exiting
+    }
     // This call is blocking:
-    check_for_mencoder();
     // Starts it all:
     gtk_main();
 }
+
 /**
  * Destructor of a toon looper.
  */
 Application::~Application()
 {
-    for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
-        delete iter->second;
+    // No need, since we use shared_ptr:
+    //for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
+    //    delete iter->second;
 }
+
 /**
  * Creates all the project directories.
  *
  * Returns whether the directories exist or not once done.
  */
-
 bool Application::setup_project_home(const std::string &project_home)
 {
     if (not make_sure_directory_exists(project_home))
@@ -391,8 +433,9 @@ void Application::update_project_home_for_each_clip()
 {
     // TODO: be able to change the project_home on-the-fly
     for (ClipIterator iter = clips_.begin(); iter != clips_.end(); ++iter)
-        iter->second->set_directory_path(get_configuration()->get_project_home());
+        iter->second.get()->set_directory_path(get_configuration()->get_project_home());
 }
+
 Pipeline* Application::get_pipeline() 
 {
     return pipeline_.get();
@@ -435,6 +478,7 @@ void Application::quit()
     pipeline_->stop();
     gtk_main_quit();
 }
+
 /**
  * Checks for asynchronous messages.
  * 
@@ -443,35 +487,7 @@ void Application::quit()
 void Application::check_for_messages()
 {
     // TODO: move message handling here.
-    get_midi_input()->consume_messages();    
-    get_osc_interface()->consume_messages();    
-}
-/**
- * Handles asynchronous messages.
- */
-void Application::handle_message(Message &message)
-{
-    unsigned int value = message.get_value();
-    switch (message.get_command())
-    {
-        case Message::ADD_IMAGE:
-            get_controller()->add_frame();
-            break;
-        case Message::REMOVE_IMAGE:
-            get_controller()->remove_frame();
-            break;
-        case Message::VIDEO_RECORD_ON:
-            get_controller()->enable_video_grabbing(true);
-            break;
-        case Message::VIDEO_RECORD_OFF:
-            get_controller()->enable_video_grabbing(false);
-            break;
-        case Message::SELECT_CLIP:
-            get_controller()->choose_clip(value);
-            break;
-        case Message::QUIT:
-            quit();
-            break;
-    }
+    get_midi_input()->consume_commands();    
+    get_osc_interface()->consume_commands();    
 }
 

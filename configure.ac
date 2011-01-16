@@ -2,12 +2,17 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.0.4, support@toonloop.com)
+AC_INIT(TOONLOOP, 2.1.6, support@toonloop.com)
 AC_DEFINE([PACKAGE_URL],["http://www.toonloop.com"])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
 AC_PROG_LIBTOOL
 AM_INIT_AUTOMAKE()
+
+AS_VERSION
+AC_DEFINE_UNQUOTED(PACKAGE_VERSION_MAJOR, $PACKAGE_VERSION_MAJOR, [major version])
+AC_DEFINE_UNQUOTED(PACKAGE_VERSION_MINOR, $PACKAGE_VERSION_MINOR, [minor version])
+AC_DEFINE_UNQUOTED(PACKAGE_VERSION_MICRO, $PACKAGE_VERSION_MICRO, [micro version])
 
 # Check for C++ compiler
 AC_PROG_CXX
@@ -139,16 +144,21 @@ PIXMAPS_DIR=$DATADIR/pixmaps
 AC_SUBST(PIXMAPS_DIR)
 AC_MSG_NOTICE(Storing pixmaps files in $PIXMAPS_DIR)
 
+AC_DEFINE_UNQUOTED([DATADIR], "${DATADIR}", "Data dir")
+AC_DEFINE_UNQUOTED([PIXMAPS_DIR], "${PIXMAPS_DIR}", "Pixmaps dir")
+
 AC_SUBST(CXXFLAGS, " -O2 -Wall -Werror -Wextra -Wfatal-errors") 
 
 AC_CONFIG_FILES([
     Makefile
     src/Makefile
     src/doxyfile
+    src/shaders/Makefile
     man/Makefile
     tests/Makefile
     pixmaps/Makefile
     completion/Makefile
+    presets/Makefile
     ])
 AC_OUTPUT
 

@@ -1,5 +1,8 @@
 /* src/config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* "Data dir" */
+#undef DATADIR
+
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
@@ -93,6 +96,18 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* major version */
+#undef PACKAGE_VERSION_MAJOR
+
+/* micro version */
+#undef PACKAGE_VERSION_MICRO
+
+/* minor version */
+#undef PACKAGE_VERSION_MINOR
+
+/* "Pixmaps dir" */
+#undef PIXMAPS_DIR
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
