@@ -4,7 +4,7 @@ toonloop (2.1.8-1~natty2~ppa1) natty; urgency=low
 
  -- Alexandre Quessy <alexandre@quessy.net>  Mon, 17 Jan 2011 13:29:17 -0500
 
-toonloop (2.1.8-1~natty~ppa1) natty; urgency=low
+toonloop (2.1.8-1~natty~ppa1) maverick; urgency=low
 
   * New upstream release.
   * Packaging for Natty
