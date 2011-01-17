@@ -2,8 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.1.6, support@toonloop.com)
-AC_DEFINE([PACKAGE_URL],["http://www.toonloop.com"])
+AC_INIT(TOONLOOP, 2.1.8, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
 AC_PROG_LIBTOOL
@@ -36,14 +35,14 @@ AC_CHECK_LIB([m],[sin],[AC_SUBST([LIBM_CXXFLAGS],["-lm"])])
 # TODO: print some message when configuring STK is OK
 AC_LANG_PUSH(C++)
 # save original flags
-SAVED_LDFLAGS=$LDFLAGS
-LDFLAGS="$LDFLAGS -lstk"
+SAVED_LIBS=$LIBS
+LIBS="$LIBS -lstk"
 AC_LINK_IFELSE(
         [AC_LANG_PROGRAM([ #include <stk/RtMidi.h> ],
         [RtMidiIn input])],
         [AC_SUBST(STK_LIBS," -lstk -lrt -lm")],
         [AC_MSG_ERROR([libstk is not installed: alsa])])
-LDFLAGS=$SAVED_LDFLAGS # restore them
+LIBS=$SAVED_LIBS # restore them
 AC_SUBST(STK_CXXFLAGS, "-D__LINUX_ALSA__ -D__UNIX_JACK__ -D__LITTLE_ENDIAN__")
 AC_LANG_POP(C++)
 

@@ -87,7 +87,7 @@
 #define PACKAGE_NAME "TOONLOOP"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "TOONLOOP 2.1.6"
+#define PACKAGE_STRING "TOONLOOP 2.1.8"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "toonloop"
@@ -96,13 +96,13 @@
 #define PACKAGE_URL "http://www.toonloop.com"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.1.6"
+#define PACKAGE_VERSION "2.1.8"
 
 /* major version */
 #define PACKAGE_VERSION_MAJOR 2
 
 /* micro version */
-#define PACKAGE_VERSION_MICRO 6
+#define PACKAGE_VERSION_MICRO 8
 
 /* minor version */
 #define PACKAGE_VERSION_MINOR 1
@@ -114,7 +114,7 @@
 #define STDC_HEADERS 1
 
 /* Version number of package */
-#define VERSION "2.1.6"
+#define VERSION "2.1.8"
 
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
