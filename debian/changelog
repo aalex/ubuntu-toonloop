@@ -1,3 +1,9 @@
+toonloop (2.1.6-1) maverick; urgency=low
+
+  * Package for Maverick
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Mon, 17 Jan 2011 09:17:54 -0500
+
 toonloop (2.1.6-1) lucid; urgency=low
 
   * New upstream release.
