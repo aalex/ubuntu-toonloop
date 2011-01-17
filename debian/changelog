@@ -1,6 +1,6 @@
-toonloop (2.1.6-1~maverick) maverick; urgency=low
+toonloop (2.1.6-1~maverick~ppa1) maverick; urgency=low
 
-  * Package for Maverick
+  * Packaging for Maverick
 
  -- Alexandre Quessy <alexandre@quessy.net>  Mon, 17 Jan 2011 09:17:54 -0500
 
