@@ -1,8 +1,9 @@
 toonloop (2.1.6-1~natty~ppa1) maverick; urgency=low
 
+  * New upstream release.
   * Packaging for Natty
 
- -- Alexandre Quessy <alexandre@quessy.net>  Mon, 17 Jan 2011 11:25:54 -0500
+ -- Alexandre Quessy <alexandre@quessy.net>  Mon, 17 Jan 2011 12:52:17 -0500
 
 toonloop (2.1.6-1~maverick~ppa1) maverick; urgency=low
 
