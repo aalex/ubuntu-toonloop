@@ -21,6 +21,7 @@
 #ifndef __APPLICATION_H__
 #define __APPLICATION_H__
 
+#include <glib.h>
 #include <boost/program_options.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <tr1/memory>
@@ -51,7 +52,8 @@ static const std::string INTERACTIVE_HELP(
     "\n  Page-up: Switch to the previous clip."
     "\n  Number from 0 to 9: Switch to a specific clip."
     "\n  Ctrl-number: Switch to a specific layout."
-    "\n  s: Save the current clip as a movie file."
+    "\n  Ctrl-e: Export the current clip as a movie file."
+    "\n  Ctrl-s: Save the whole project."
     "\n  period (.): Toggle the layout."
     "\n  Tab: Change the playback direction."
     "\n  r: Clear the current clip."
@@ -102,10 +104,45 @@ class Application
         /** Returns the OscInterface. */
         OscInterface* get_osc_interface();
         void check_for_messages();
+        /**
+         * Loads a project from an XML file.
+         * @param file_name XML file to read.
+         * @warning Not implemented yet.
+         */
+        bool load_project(std::string &project_path);
+        /**
+         * Saves the current project to an XML file.
+         * @param file_name XML file to write.
+         *
+         * The XML file looks like this:
+           \verbatim
+           <?xml version="1.0" encoding="UTF-8"?>
+           <toonloop_project name="default">
+             <clips>
+               <clip id="0">
+                 <images>
+                   <image path="image0.jpg"/>
+                   <image path="image1.jpg"/>
+                 </images>
+               </clip>
+               <clip id="1">
+                 <images>
+                   <image path="image2.jpg"/>
+                   <image path="image3.jpg"/>
+                 </images>
+               </clip>
+             </clips>
+           </project>
+           \endverbatim
+         */
+        bool save_project(std::string &project_path);
+        std::string get_project_file_name();
 
     private:
         void update_project_home_for_each_clip();
         bool setup_project_home(const std::string& project_home);
+        void before_shutdown();
+        static gboolean on_auto_save(gpointer user_data);
         boost::scoped_ptr<Controller> controller_;
         boost::scoped_ptr<Gui> gui_;
         boost::scoped_ptr<MidiInput> midi_input_;

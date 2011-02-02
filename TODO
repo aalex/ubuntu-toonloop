@@ -12,6 +12,7 @@ Those issues are being worked on in some branches. They need some work so that w
 
  * video: Support DV: gst-launch dv1394src ! queue ! dvdemux name=d ! queue ! dvdec ! xvimagesink
  * video: Support HDV (hdvdec)
+ * statesaving: choose the right key bindings
 
 
 Review needed
@@ -24,6 +25,8 @@ Can anyone else than me (Alexandre) please review and comment or modify those?
 
 Top Priorities
 --------------
+
+ * TODO: make videotestsrc size configurable as well!
  * video: detect what frame rate should work with each web cam, at fallback to the closest that would work if the one provided on the command-line is not supported. For example: (Logitech HD Pro Webcam C910) Caps structure from v4l2src srcpad: video/x-raw-yuv, format=(fourcc)YUY2, width=(int)704, height=(int)576, framerate=(fraction){ 25/1, 45/2, 20/1, 35/2, 15/1, 25/2, 10/1, 15/2, 5/1, 5/2, 1/1 }; Video source caps are video/x-raw-yuv, width=704, height=576, framerate=25/1
  * editing: allow an infinity of clips. Paging could allow more than ten clips. Use <>
  * gui: Why does closing the info window makes the app unresponsive?
@@ -98,10 +101,7 @@ To be done later
  * playback: translation *paths* 
  * saving: Add PNG and TGA saving image formats.
  * saving: Create a done_saving signal and make the moviesaver call it with the movie file name and the clip id
- * saving: Load projects from XML
- * saving: Load/save a whole project (many clips)
  * saving: Save all clips (all 10 from 0 to 9) with modifier (shift?)
- * saving: Save projects to XML (statesaving.cpp doesn't work currently)
  * saving: Support saving in AVI
  * saving: create a subdir for each clip in images and movies dirs
  * video: do not crash if the v4l2 device is busy
