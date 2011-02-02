@@ -1,3 +1,9 @@
+toonloop (2.1.10-1~natty2~ppa1) natty; urgency=low
+
+  * New upstream release.
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Wed, 02 Feb 2011 17:08:12 -0500
+
 toonloop (2.1.8-1~natty2~ppa1) natty; urgency=low
 
   * Fixed packaging for Natty
