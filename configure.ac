@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.1.8, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
+AC_INIT(TOONLOOP, 2.1.10, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
 AC_PROG_LIBTOOL
@@ -15,6 +15,10 @@ AC_DEFINE_UNQUOTED(PACKAGE_VERSION_MICRO, $PACKAGE_VERSION_MICRO, [micro version
 
 # Check for C++ compiler
 AC_PROG_CXX
+
+# check for programs
+AC_PROG_INSTALL
+AC_PROG_LN_S
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -95,7 +99,25 @@ fi
 AC_SUBST([CLUTTERGST_LIBS])
 AC_SUBST([CLUTTERGST_CFLAGS])
 
-# TODO: maybe check explicitely for libxml2
+#Set libraw1394 with pkg-config
+PKG_CHECK_MODULES(RAW1394, libraw1394, have_raw1394=true, have_raw1394=false)
+if test "x${have_raw1394}" = "xfalse" ; then
+    AC_MSG_ERROR([Missing libraw1394])
+fi
+
+#Trying to set LIBAVC1394 using pkg-config
+PKG_CHECK_MODULES(AVC1394, [libavc1394], have_avc1394=true, have_avc1394=false)
+if test "x${have_avc1394}" = "xfalse" ; then
+	AC_MSG_ERROR([missing package: libavc1394-dev ])
+fi
+
+# libxml2
+PKG_CHECK_MODULES([LIBXML], [libxml-2.0], have_libxml=true, have_libxml=false)
+if test "x${have_libxml}" = "xfalse" ; then
+    AC_MSG_ERROR([missing package: libxml2-dev])
+fi
+AC_SUBST([LIBXML_LIBS])
+AC_SUBST([LIBXML_CFLAGS])
 
 # BOOST
 AX_BOOST_BASE([1.35])

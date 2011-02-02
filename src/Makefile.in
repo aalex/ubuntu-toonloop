@@ -74,8 +74,8 @@ am_toonloop_OBJECTS = toonloop-application.$(OBJEXT) \
 	toonloop-pipeline.$(OBJEXT) \
 	toonloop-playheaditerator.$(OBJEXT) \
 	toonloop-midibinder.$(OBJEXT) toonloop-brcosaeffect.$(OBJEXT) \
-	toonloop-saverworker.$(OBJEXT) toonloop-statesaving.$(OBJEXT) \
-	toonloop-subprocess.$(OBJEXT) toonloop-timer.$(OBJEXT) \
+	toonloop-saverworker.$(OBJEXT) toonloop-subprocess.$(OBJEXT) \
+	toonloop-raw1394util.$(OBJEXT) toonloop-timer.$(OBJEXT) \
 	toonloop-timing.$(OBJEXT) toonloop-v4l2util.$(OBJEXT) \
 	toonloop-oscinterface.$(OBJEXT) toonloop-oscreceiver.$(OBJEXT) \
 	toonloop-oscsender.$(OBJEXT) $(am__objects_1)
@@ -85,7 +85,9 @@ toonloop_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 toonloop_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(toonloop_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -162,6 +164,8 @@ AR = @AR@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
+AVC1394_CFLAGS = @AVC1394_CFLAGS@
+AVC1394_LIBS = @AVC1394_LIBS@
 AWK = @AWK@
 BOOST_CPPFLAGS = @BOOST_CPPFLAGS@
 BOOST_DATE_TIME_LIB = @BOOST_DATE_TIME_LIB@
@@ -219,6 +223,8 @@ LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTHREAD_CXXFLAGS = @LIBTHREAD_CXXFLAGS@
 LIBTOOL = @LIBTOOL@
+LIBXML_CFLAGS = @LIBXML_CFLAGS@
+LIBXML_LIBS = @LIBXML_LIBS@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
@@ -243,9 +249,9 @@ PACKAGE_VERSION_MINOR = @PACKAGE_VERSION_MINOR@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PIXMAPS_DIR = @PIXMAPS_DIR@
 PKG_CONFIG = @PKG_CONFIG@
-PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
-PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
+RAW1394_CFLAGS = @RAW1394_CFLAGS@
+RAW1394_LIBS = @RAW1394_LIBS@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
@@ -332,6 +338,7 @@ headers = \
     playheaditerator.h \
 	property.h \
 	properties.h \
+	raw1394util.h \
 	midibinder.h \
     brcosaeffect.h \
 	saverworker.h \
@@ -361,8 +368,8 @@ toonloop_SOURCES = \
     midibinder.cpp \
     brcosaeffect.cpp \
 	saverworker.cpp \
-	statesaving.cpp \
 	subprocess.cpp \
+	raw1394util.cpp \
 	timer.cpp \
 	timing.cpp \
 	v4l2util.cpp \
@@ -379,7 +386,10 @@ toonloop_CXXFLAGS = \
 	$(LIBLO_CFLAGS) \
 	$(LIBM_CXXFLAGS) \
 	$(LIBTHREAD_CXXFLAGS) \
-	$(STK_CXXFLAGS)
+	$(RAW1394_CFLAGS) \
+	$(AVC1394_CFLAGS) \
+	$(STK_CXXFLAGS) \
+	$(LIBXML_XFLAGS)
 
 toonloop_LDADD = \
 	$(BOOST_FILESYSTEM_LIB) \
@@ -394,7 +404,10 @@ toonloop_LDADD = \
 	$(LIBM_LIBS) \
 	$(LIBTHREAD_LIBS) \
 	$(LDFLAGS) \
-	$(STK_LIBS)
+	$(RAW1394_LIBS) \
+	$(AVC1394_LIBS) \
+	$(STK_LIBS) \
+	$(LIBXML_LIBS)
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
@@ -536,8 +549,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-oscsender.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-pipeline.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-playheaditerator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-raw1394util.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-saverworker.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-statesaving.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-subprocess.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-timer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toonloop-timing.Po@am__quote@
@@ -816,20 +829,6 @@ toonloop-saverworker.obj: saverworker.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-saverworker.obj `if test -f 'saverworker.cpp'; then $(CYGPATH_W) 'saverworker.cpp'; else $(CYGPATH_W) '$(srcdir)/saverworker.cpp'; fi`
 
-toonloop-statesaving.o: statesaving.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-statesaving.o -MD -MP -MF $(DEPDIR)/toonloop-statesaving.Tpo -c -o toonloop-statesaving.o `test -f 'statesaving.cpp' || echo '$(srcdir)/'`statesaving.cpp
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-statesaving.Tpo $(DEPDIR)/toonloop-statesaving.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='statesaving.cpp' object='toonloop-statesaving.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-statesaving.o `test -f 'statesaving.cpp' || echo '$(srcdir)/'`statesaving.cpp
-
-toonloop-statesaving.obj: statesaving.cpp
-@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-statesaving.obj -MD -MP -MF $(DEPDIR)/toonloop-statesaving.Tpo -c -o toonloop-statesaving.obj `if test -f 'statesaving.cpp'; then $(CYGPATH_W) 'statesaving.cpp'; else $(CYGPATH_W) '$(srcdir)/statesaving.cpp'; fi`
-@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-statesaving.Tpo $(DEPDIR)/toonloop-statesaving.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='statesaving.cpp' object='toonloop-statesaving.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-statesaving.obj `if test -f 'statesaving.cpp'; then $(CYGPATH_W) 'statesaving.cpp'; else $(CYGPATH_W) '$(srcdir)/statesaving.cpp'; fi`
-
 toonloop-subprocess.o: subprocess.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-subprocess.o -MD -MP -MF $(DEPDIR)/toonloop-subprocess.Tpo -c -o toonloop-subprocess.o `test -f 'subprocess.cpp' || echo '$(srcdir)/'`subprocess.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-subprocess.Tpo $(DEPDIR)/toonloop-subprocess.Po
@@ -843,6 +842,20 @@ toonloop-subprocess.obj: subprocess.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='subprocess.cpp' object='toonloop-subprocess.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-subprocess.obj `if test -f 'subprocess.cpp'; then $(CYGPATH_W) 'subprocess.cpp'; else $(CYGPATH_W) '$(srcdir)/subprocess.cpp'; fi`
+
+toonloop-raw1394util.o: raw1394util.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-raw1394util.o -MD -MP -MF $(DEPDIR)/toonloop-raw1394util.Tpo -c -o toonloop-raw1394util.o `test -f 'raw1394util.cpp' || echo '$(srcdir)/'`raw1394util.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-raw1394util.Tpo $(DEPDIR)/toonloop-raw1394util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='raw1394util.cpp' object='toonloop-raw1394util.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-raw1394util.o `test -f 'raw1394util.cpp' || echo '$(srcdir)/'`raw1394util.cpp
+
+toonloop-raw1394util.obj: raw1394util.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-raw1394util.obj -MD -MP -MF $(DEPDIR)/toonloop-raw1394util.Tpo -c -o toonloop-raw1394util.obj `if test -f 'raw1394util.cpp'; then $(CYGPATH_W) 'raw1394util.cpp'; else $(CYGPATH_W) '$(srcdir)/raw1394util.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/toonloop-raw1394util.Tpo $(DEPDIR)/toonloop-raw1394util.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='raw1394util.cpp' object='toonloop-raw1394util.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -c -o toonloop-raw1394util.obj `if test -f 'raw1394util.cpp'; then $(CYGPATH_W) 'raw1394util.cpp'; else $(CYGPATH_W) '$(srcdir)/raw1394util.cpp'; fi`
 
 toonloop-timer.o: timer.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(toonloop_CXXFLAGS) $(CXXFLAGS) -MT toonloop-timer.o -MD -MP -MF $(DEPDIR)/toonloop-timer.Tpo -c -o toonloop-timer.o `test -f 'timer.cpp' || echo '$(srcdir)/'`timer.cpp
