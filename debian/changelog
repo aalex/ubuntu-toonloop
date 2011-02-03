@@ -1,3 +1,9 @@
+toonloop (2.1.10-1~maverick3~ppa1) maverick; urgency=low
+
+  * Added missing deps
+
+ -- Alexandre Quessy <alexandre@quessy.net>  Wed, 02 Feb 2011 21:59:02 -0500
+
 toonloop (2.1.10-1~maverick2~ppa1) maverick; urgency=low
 
   * Package for Maverick
