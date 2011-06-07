@@ -27,7 +27,7 @@ Build-Depends:
  libboost-system-dev,
  libboost-thread-dev,
  libclutter-1.0-dev,
- libclutter-gst-0.10-dev,
+ libclutter-gst-0.10-dev | libclutter-gst-1.0-dev,
  libclutter-gtk-0.10-dev,
  libglew1.5-dev,
  libglib2.0-dev,
