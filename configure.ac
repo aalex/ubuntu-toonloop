@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.1.10, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
+AC_INIT(TOONLOOP, 2.1.12, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
 AC_PROG_LIBTOOL
@@ -76,7 +76,7 @@ AC_SUBST([GSTAPP_LIBS])
 # Clutter
 PKG_CHECK_MODULES([CLUTTER], [clutter-1.0 >= 1.0], have_clutter=true, have_clutter=false)
 if test "x${have_clutter}" = "xfalse" ; then
-    AC_MSG_ERROR([missing package: libclutter-1.0-dev])
+    AC_MSG_ERROR([missing package: libclutter])
 fi
 AC_SUBST([CLUTTER_LIBS])
 AC_SUBST([CLUTTER_CFLAGS])
@@ -85,16 +85,19 @@ AC_SUBST([CLUTTER_CFLAGS])
 
 # Clutter-GTK
 PKG_CHECK_MODULES([CLUTTERGTK], [clutter-gtk-0.10 >= 0.10], have_clutter_gtk=true, have_clutter_gtk=false)
+# PKG_CHECK_MODULES([CLUTTERGTK], [clutter-gtk-1.0 >= 1.0], have_clutter_gtk=true, have_clutter_gtk=false))
+# FIXME: clutter-gtk-1.0 is linked with gtk-3
 if test "x${have_clutter_gtk}" = "xfalse" ; then
-    AC_MSG_ERROR([missing package: libclutter-gtk-0.10-dev])
+    AC_MSG_ERROR([missing package: libclutter-gtk])
 fi
 AC_SUBST([CLUTTERGTK_LIBS])
 AC_SUBST([CLUTTERGTK_CFLAGS])
 
 # Clutter-GST
-PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-0.10 >= 0.10], have_clutter_gst=true, have_clutter_gst=false)
+PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-0.10 >= 0.10], have_clutter_gst=true, 
+    PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-1.0 >= 1.0], have_clutter_gst=true, have_clutter_gst=false))
 if test "x${have_clutter_gst}" = "xfalse" ; then
-    AC_MSG_ERROR([missing package: libclutter-gst-0.10-dev])
+    AC_MSG_ERROR([missing package: libclutter-gst-dev])
 fi
 AC_SUBST([CLUTTERGST_LIBS])
 AC_SUBST([CLUTTERGST_CFLAGS])

@@ -10,6 +10,7 @@ Messages Toonloop can receive
  * /toon/frame/remove: Remove a frame
  * /toon/clip/select i:clip_number : Selects a clip
  * /toon/clip/save_current : Saves the currently selected clip
+ * /toon/clip/import_image s:file_name : Imports an image from the filesystem
 
 
 Messages sent by Toonloop
@@ -27,5 +28,6 @@ Toonloop sends the following OSC messages:
  * /toon/frame/remove i:clip_number i:frame_number
  * /toon/playhead/direction i:clip_number s:direction
  * /toon/playhead/none
+ * /toon/clip/import_image s:file_name : Imports an image from the filesystem
 
 

@@ -37,7 +37,8 @@ host_triplet = @host@
 TESTS = check_looper$(EXEEXT) check_classes$(EXEEXT) \
 	check_threads$(EXEEXT) check_bool$(EXEEXT) \
 	check_symlinks$(EXEEXT) check_containers$(EXEEXT) \
-	check_statesaving$(EXEEXT) check_signals$(EXEEXT)
+	check_statesaving$(EXEEXT) check_signals$(EXEEXT) \
+	check_imageimporter$(EXEEXT) check_properties$(EXEEXT)
 noinst_PROGRAMS = $(am__EXEEXT_1)
 subdir = tests
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -62,7 +63,8 @@ CONFIG_CLEAN_VPATH_FILES =
 am__EXEEXT_1 = check_looper$(EXEEXT) check_classes$(EXEEXT) \
 	check_threads$(EXEEXT) check_bool$(EXEEXT) \
 	check_symlinks$(EXEEXT) check_containers$(EXEEXT) \
-	check_statesaving$(EXEEXT) check_signals$(EXEEXT)
+	check_statesaving$(EXEEXT) check_signals$(EXEEXT) \
+	check_imageimporter$(EXEEXT) check_properties$(EXEEXT)
 PROGRAMS = $(noinst_PROGRAMS)
 am_check_bool_OBJECTS = check_bool.$(OBJEXT)
 check_bool_OBJECTS = $(am_check_bool_OBJECTS)
@@ -81,12 +83,32 @@ check_containers_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(check_containers_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am_check_imageimporter_OBJECTS =  \
+	check_imageimporter-check_imageimporter.$(OBJEXT) \
+	check_imageimporter-image_importer.$(OBJEXT)
+check_imageimporter_OBJECTS = $(am_check_imageimporter_OBJECTS)
+am__DEPENDENCIES_1 =
+check_imageimporter_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+check_imageimporter_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(check_imageimporter_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_check_looper_OBJECTS = check_looper-check_looper.$(OBJEXT)
 check_looper_OBJECTS = $(am_check_looper_OBJECTS)
 check_looper_DEPENDENCIES =
 check_looper_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(check_looper_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+am_check_properties_OBJECTS =  \
+	check_properties-check_properties.$(OBJEXT)
+check_properties_OBJECTS = $(am_check_properties_OBJECTS)
+check_properties_LDADD = $(LDADD)
+check_properties_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(check_properties_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am_check_signals_OBJECTS = check_signals-check_signals.$(OBJEXT)
 check_signals_OBJECTS = $(am_check_signals_OBJECTS)
 check_signals_DEPENDENCIES =
@@ -103,7 +125,6 @@ check_statesaving_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LDFLAGS) -o $@
 am_check_symlinks_OBJECTS = check_symlinks-check_symlinks.$(OBJEXT)
 check_symlinks_OBJECTS = $(am_check_symlinks_OBJECTS)
-am__DEPENDENCIES_1 =
 check_symlinks_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 check_symlinks_LINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -129,12 +150,23 @@ CXXLD = $(CXX)
 CXXLINK = $(LIBTOOL) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+CCLD = $(CC)
+LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
+	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 SOURCES = $(check_bool_SOURCES) $(check_classes_SOURCES) \
-	$(check_containers_SOURCES) $(check_looper_SOURCES) \
+	$(check_containers_SOURCES) $(check_imageimporter_SOURCES) \
+	$(check_looper_SOURCES) $(check_properties_SOURCES) \
 	$(check_signals_SOURCES) $(check_statesaving_SOURCES) \
 	$(check_symlinks_SOURCES) $(check_threads_SOURCES)
 DIST_SOURCES = $(check_bool_SOURCES) $(check_classes_SOURCES) \
-	$(check_containers_SOURCES) $(check_looper_SOURCES) \
+	$(check_containers_SOURCES) $(check_imageimporter_SOURCES) \
+	$(check_looper_SOURCES) $(check_properties_SOURCES) \
 	$(check_signals_SOURCES) $(check_statesaving_SOURCES) \
 	$(check_symlinks_SOURCES) $(check_threads_SOURCES)
 ETAGS = etags
@@ -233,6 +265,8 @@ PACKAGE_VERSION_MINOR = @PACKAGE_VERSION_MINOR@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PIXMAPS_DIR = @PIXMAPS_DIR@
 PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 RANLIB = @RANLIB@
 RAW1394_CFLAGS = @RAW1394_CFLAGS@
 RAW1394_LIBS = @RAW1394_LIBS@
@@ -313,11 +347,9 @@ check_bool_SOURCES = check_bool.cpp
 # #-I../../src
 # check_datetime_LDADD = $(BOOST_LIBS) $(GTK_LIBS)
 
-# FIXME: we need to add both ../src and ../../src to include path for makedist
-
 # check_tween_SOURCES = check_tween.cpp ../src/tween.cpp 
 # #../src/tween.h
-# check_tween_CXXFLAGS = $(BOOST_CPPFLAGS) -I../src/ 
+# check_tween_CXXFLAGS = $(BOOST_CPPFLAGS) -I$(top_srcdir)/src/ 
 # #-I../../tests
 # check_tween_LDADD = $(BOOST_LIBS) 
 check_symlinks_SOURCES = check_symlinks.cpp 
@@ -326,7 +358,7 @@ check_symlinks_LDADD = $(BOOST_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB)
 
 # check_moviesaver_SOURCES = check_moviesaver.cpp ../src/clip.cpp  ../src/image.cpp ../src/timing.cpp ../src/moviesaver.cpp ../src/saverworker.cpp ../src/subprocess.cpp 
 # #../src/clip.h  ../src/image.h ../src/timing.h ../src/moviesaver.h ../src/saverworker.h ../src/subprocess.h
-# check_moviesaver_CXXFLAGS = $(BOOST_CPPFLAGS)  $(GTK_CFLAGS) -I../src/ 
+# check_moviesaver_CXXFLAGS = $(BOOST_CPPFLAGS)  $(GTK_CFLAGS) -I$(top_srcdir)/src/ 
 # #-I../../src
 # check_moviesaver_LDADD = $(BOOST_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB) $(GTK_LIBS)
 check_containers_SOURCES = check_containers.cpp 
@@ -338,6 +370,17 @@ check_statesaving_LDADD = $(BOOST_LIBS)
 check_signals_SOURCES = check_signals.cpp 
 check_signals_CXXFLAGS = $(BOOST_CPPFLAGS) 
 check_signals_LDADD = $(BOOST_LIBS) 
+
+# check_midi_SOURCES = check_midi.cpp ../src/midi.cpp 
+# #../src/midi.h
+# check_midi_CXXFLAGS = $(STK_CXXFLAGS) $(CXXFLAGS) $(BOOST_CPPFLAGS) -I$(top_srcdir)/src/ 
+# #-I../../src
+# check_midi_LDADD = $(LDFLAGS) $(STK_LIBS) $(BOOST_LIBS) 
+check_imageimporter_SOURCES = check_imageimporter.cpp $(top_srcdir)/src/image_importer.cpp
+check_imageimporter_CXXFLAGS = $(BOOST_CPPFLAGS) $(CLUTTERGTK_CFLAGS) -Wno-fatal-error -Wno-deprecated -I$(top_srcdir)/src
+check_imageimporter_LDADD = $(BOOST_LIBS) $(CLUTTERGTK_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_SYSTEM_LIB)
+check_properties_SOURCES = $(top_srcdir)/src/properties.h $(top_srcdir)/src/property.h check_properties.cpp
+check_properties_CXXFLAGS = -I$(top_srcdir)/src
 all: all-am
 
 .SUFFIXES:
@@ -390,9 +433,15 @@ check_classes$(EXEEXT): $(check_classes_OBJECTS) $(check_classes_DEPENDENCIES)
 check_containers$(EXEEXT): $(check_containers_OBJECTS) $(check_containers_DEPENDENCIES) 
 	@rm -f check_containers$(EXEEXT)
 	$(check_containers_LINK) $(check_containers_OBJECTS) $(check_containers_LDADD) $(LIBS)
+check_imageimporter$(EXEEXT): $(check_imageimporter_OBJECTS) $(check_imageimporter_DEPENDENCIES) 
+	@rm -f check_imageimporter$(EXEEXT)
+	$(check_imageimporter_LINK) $(check_imageimporter_OBJECTS) $(check_imageimporter_LDADD) $(LIBS)
 check_looper$(EXEEXT): $(check_looper_OBJECTS) $(check_looper_DEPENDENCIES) 
 	@rm -f check_looper$(EXEEXT)
 	$(check_looper_LINK) $(check_looper_OBJECTS) $(check_looper_LDADD) $(LIBS)
+check_properties$(EXEEXT): $(check_properties_OBJECTS) $(check_properties_DEPENDENCIES) 
+	@rm -f check_properties$(EXEEXT)
+	$(check_properties_LINK) $(check_properties_OBJECTS) $(check_properties_LDADD) $(LIBS)
 check_signals$(EXEEXT): $(check_signals_OBJECTS) $(check_signals_DEPENDENCIES) 
 	@rm -f check_signals$(EXEEXT)
 	$(check_signals_LINK) $(check_signals_OBJECTS) $(check_signals_LDADD) $(LIBS)
@@ -415,7 +464,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_bool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_classes-check_classes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_containers-check_containers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_imageimporter-check_imageimporter.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_imageimporter-image_importer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_looper-check_looper.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_properties-check_properties.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_signals-check_signals.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_statesaving-check_statesaving.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/check_symlinks-check_symlinks.Po@am__quote@
@@ -470,6 +522,34 @@ check_containers-check_containers.obj: check_containers.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_containers_CXXFLAGS) $(CXXFLAGS) -c -o check_containers-check_containers.obj `if test -f 'check_containers.cpp'; then $(CYGPATH_W) 'check_containers.cpp'; else $(CYGPATH_W) '$(srcdir)/check_containers.cpp'; fi`
 
+check_imageimporter-check_imageimporter.o: check_imageimporter.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -MT check_imageimporter-check_imageimporter.o -MD -MP -MF $(DEPDIR)/check_imageimporter-check_imageimporter.Tpo -c -o check_imageimporter-check_imageimporter.o `test -f 'check_imageimporter.cpp' || echo '$(srcdir)/'`check_imageimporter.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_imageimporter-check_imageimporter.Tpo $(DEPDIR)/check_imageimporter-check_imageimporter.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='check_imageimporter.cpp' object='check_imageimporter-check_imageimporter.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -c -o check_imageimporter-check_imageimporter.o `test -f 'check_imageimporter.cpp' || echo '$(srcdir)/'`check_imageimporter.cpp
+
+check_imageimporter-check_imageimporter.obj: check_imageimporter.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -MT check_imageimporter-check_imageimporter.obj -MD -MP -MF $(DEPDIR)/check_imageimporter-check_imageimporter.Tpo -c -o check_imageimporter-check_imageimporter.obj `if test -f 'check_imageimporter.cpp'; then $(CYGPATH_W) 'check_imageimporter.cpp'; else $(CYGPATH_W) '$(srcdir)/check_imageimporter.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_imageimporter-check_imageimporter.Tpo $(DEPDIR)/check_imageimporter-check_imageimporter.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='check_imageimporter.cpp' object='check_imageimporter-check_imageimporter.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -c -o check_imageimporter-check_imageimporter.obj `if test -f 'check_imageimporter.cpp'; then $(CYGPATH_W) 'check_imageimporter.cpp'; else $(CYGPATH_W) '$(srcdir)/check_imageimporter.cpp'; fi`
+
+check_imageimporter-image_importer.o: $(top_srcdir)/src/image_importer.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -MT check_imageimporter-image_importer.o -MD -MP -MF $(DEPDIR)/check_imageimporter-image_importer.Tpo -c -o check_imageimporter-image_importer.o `test -f '$(top_srcdir)/src/image_importer.cpp' || echo '$(srcdir)/'`$(top_srcdir)/src/image_importer.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_imageimporter-image_importer.Tpo $(DEPDIR)/check_imageimporter-image_importer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(top_srcdir)/src/image_importer.cpp' object='check_imageimporter-image_importer.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -c -o check_imageimporter-image_importer.o `test -f '$(top_srcdir)/src/image_importer.cpp' || echo '$(srcdir)/'`$(top_srcdir)/src/image_importer.cpp
+
+check_imageimporter-image_importer.obj: $(top_srcdir)/src/image_importer.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -MT check_imageimporter-image_importer.obj -MD -MP -MF $(DEPDIR)/check_imageimporter-image_importer.Tpo -c -o check_imageimporter-image_importer.obj `if test -f '$(top_srcdir)/src/image_importer.cpp'; then $(CYGPATH_W) '$(top_srcdir)/src/image_importer.cpp'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/image_importer.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_imageimporter-image_importer.Tpo $(DEPDIR)/check_imageimporter-image_importer.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$(top_srcdir)/src/image_importer.cpp' object='check_imageimporter-image_importer.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_imageimporter_CXXFLAGS) $(CXXFLAGS) -c -o check_imageimporter-image_importer.obj `if test -f '$(top_srcdir)/src/image_importer.cpp'; then $(CYGPATH_W) '$(top_srcdir)/src/image_importer.cpp'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/src/image_importer.cpp'; fi`
+
 check_looper-check_looper.o: check_looper.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_looper_CXXFLAGS) $(CXXFLAGS) -MT check_looper-check_looper.o -MD -MP -MF $(DEPDIR)/check_looper-check_looper.Tpo -c -o check_looper-check_looper.o `test -f 'check_looper.cpp' || echo '$(srcdir)/'`check_looper.cpp
 @am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_looper-check_looper.Tpo $(DEPDIR)/check_looper-check_looper.Po
@@ -483,6 +563,20 @@ check_looper-check_looper.obj: check_looper.cpp
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='check_looper.cpp' object='check_looper-check_looper.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_looper_CXXFLAGS) $(CXXFLAGS) -c -o check_looper-check_looper.obj `if test -f 'check_looper.cpp'; then $(CYGPATH_W) 'check_looper.cpp'; else $(CYGPATH_W) '$(srcdir)/check_looper.cpp'; fi`
+
+check_properties-check_properties.o: check_properties.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_properties_CXXFLAGS) $(CXXFLAGS) -MT check_properties-check_properties.o -MD -MP -MF $(DEPDIR)/check_properties-check_properties.Tpo -c -o check_properties-check_properties.o `test -f 'check_properties.cpp' || echo '$(srcdir)/'`check_properties.cpp
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_properties-check_properties.Tpo $(DEPDIR)/check_properties-check_properties.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='check_properties.cpp' object='check_properties-check_properties.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_properties_CXXFLAGS) $(CXXFLAGS) -c -o check_properties-check_properties.o `test -f 'check_properties.cpp' || echo '$(srcdir)/'`check_properties.cpp
+
+check_properties-check_properties.obj: check_properties.cpp
+@am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_properties_CXXFLAGS) $(CXXFLAGS) -MT check_properties-check_properties.obj -MD -MP -MF $(DEPDIR)/check_properties-check_properties.Tpo -c -o check_properties-check_properties.obj `if test -f 'check_properties.cpp'; then $(CYGPATH_W) 'check_properties.cpp'; else $(CYGPATH_W) '$(srcdir)/check_properties.cpp'; fi`
+@am__fastdepCXX_TRUE@	$(am__mv) $(DEPDIR)/check_properties-check_properties.Tpo $(DEPDIR)/check_properties-check_properties.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='check_properties.cpp' object='check_properties-check_properties.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_properties_CXXFLAGS) $(CXXFLAGS) -c -o check_properties-check_properties.obj `if test -f 'check_properties.cpp'; then $(CYGPATH_W) 'check_properties.cpp'; else $(CYGPATH_W) '$(srcdir)/check_properties.cpp'; fi`
 
 check_signals-check_signals.o: check_signals.cpp
 @am__fastdepCXX_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(check_signals_CXXFLAGS) $(CXXFLAGS) -MT check_signals-check_signals.o -MD -MP -MF $(DEPDIR)/check_signals-check_signals.Tpo -c -o check_signals-check_signals.o `test -f 'check_signals.cpp' || echo '$(srcdir)/'`check_signals.cpp
@@ -837,12 +931,6 @@ uninstall-am:
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am
 
-
-# check_midi_SOURCES = check_midi.cpp ../src/midi.cpp 
-# #../src/midi.h
-# check_midi_CXXFLAGS = $(STK_CXXFLAGS) $(CXXFLAGS) $(BOOST_CPPFLAGS) -I../src/ 
-# #-I../../src
-# check_midi_LDADD = $(LDFLAGS) $(STK_LIBS) $(BOOST_LIBS) 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -106,32 +106,29 @@ void Gui::set_onionskin_opacity(int value)
 /**
  * In fullscreen mode, hides the cursor. In windowed mode, shows the cursor.
  */
-gboolean Gui::on_window_state_event(GtkWidget* /*widget*/, GdkEventWindowState *event, gpointer user_data)
+gboolean Gui::on_window_state_event(GtkWidget* /*widget*/, GdkEvent * event, gpointer user_data)
 {
     Gui *context = static_cast<Gui*>(user_data);
-    context->isFullscreen_ = (event->new_window_state & GDK_WINDOW_STATE_FULLSCREEN);
+    GdkEventWindowState *tmp = (GdkEventWindowState *) event;
+    context->isFullscreen_ = (tmp->new_window_state & GDK_WINDOW_STATE_FULLSCREEN);
     if (context->isFullscreen_)
         context->hideCursor();
     else
         context->showCursor();
     return TRUE;
 }
+
+bool is_amd64()
+{
+    return sizeof(void*) == 8;
+}
 /**
  * In fullscreen mode, hides the cursor.
  */
 void Gui::hideCursor()
 {
-    // FIXME: this is because gtk doesn't support GDK_BLANK_CURSOR before gtk-2.16
-    char invisible_cursor_bits[] = { 0x0 };
-    static GdkCursor* cursor = 0;
-    if (cursor == 0)
-    {
-        static GdkBitmap *empty_bitmap;
-        const static GdkColor color = {0, 0, 0, 0};
-        empty_bitmap = gdk_bitmap_create_from_data(GDK_WINDOW(clutter_widget_->window), invisible_cursor_bits, 1, 1);
-        cursor = gdk_cursor_new_from_pixmap(empty_bitmap, empty_bitmap, &color, &color, 0, 0);
-    }
-    gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), cursor);
+    if (! is_amd64())
+    	gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), (GdkCursor *) GDK_BLANK_CURSOR);
 }
 
 /**
@@ -140,7 +137,7 @@ void Gui::hideCursor()
 void Gui::showCursor()
 {
     /// sets to default
-    gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), NULL);
+    gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), (GdkCursor *) NULL);
 }
 
 /**
@@ -763,10 +760,16 @@ void Gui::resize_actors()
  *
  * Makes the live input texture visible. 
  */
-void Gui::on_live_input_texture_size_changed(ClutterTexture *texture, gfloat width, gfloat height, gpointer user_data) 
+void Gui::on_live_input_texture_size_changed(ClutterTexture *texture, gint width, gint height, gpointer user_data) 
 {
-    //g_print("on_live_input_texture_size_changed\n");
+    if (width < 0 || width > 9999)
+        width = 1;
+    if (height < 0 || height > 9999)
+        height = 1;
+
     Gui *gui = static_cast<Gui*>(user_data);
+    if (gui->owner_->get_configuration()->get_verbose())
+        g_print("on_live_input_texture_size_changed\n");
     gui->video_input_width_ = (float) width;
     gui->video_input_height_ = (float) height;
 
@@ -813,7 +816,7 @@ void Gui::set_layout(layout_number layout)
  * Useful to update the layout. Calls Gui::resize_actors.
  */
 void on_playback_texture_size_changed(ClutterTexture *texture, 
-        gfloat /*width*/, gfloat /*height*/, gpointer user_data) 
+        gint /*width*/, gint /*height*/, gpointer user_data) 
 {
     //g_print("on_playback_texture_size_changed\n");
     // TODO:2010-08-06:aalex:Take into account size and ratio of the playback texture
@@ -904,6 +907,7 @@ Gui::Gui(Application* owner) :
     // Clutter widget:
     clutter_widget_ = gtk_clutter_embed_new();
     gtk_widget_set_size_request(clutter_widget_, WINWIDTH, WINHEIGHT);
+    GTK_WIDGET_UNSET_FLAGS (clutter_widget_, GTK_DOUBLE_BUFFERED);
     gtk_container_add(GTK_CONTAINER(vbox_), clutter_widget_);
     stage_ = gtk_clutter_embed_get_stage(GTK_CLUTTER_EMBED(clutter_widget_));
 
