@@ -1,4 +1,4 @@
-TESTS = check_looper check_classes check_threads check_bool check_symlinks check_containers check_statesaving check_signals 
+TESTS = check_looper check_classes check_threads check_bool check_symlinks check_containers check_statesaving check_signals check_imageimporter check_properties
 # check_midi check_moviesaver 
 
 noinst_PROGRAMS = $(TESTS)
@@ -23,11 +23,9 @@ check_bool_SOURCES = check_bool.cpp
 # #-I../../src
 # check_datetime_LDADD = $(BOOST_LIBS) $(GTK_LIBS)
 
-# FIXME: we need to add both ../src and ../../src to include path for makedist
-
 # check_tween_SOURCES = check_tween.cpp ../src/tween.cpp 
 # #../src/tween.h
-# check_tween_CXXFLAGS = $(BOOST_CPPFLAGS) -I../src/ 
+# check_tween_CXXFLAGS = $(BOOST_CPPFLAGS) -I$(top_srcdir)/src/ 
 # #-I../../tests
 # check_tween_LDADD = $(BOOST_LIBS) 
 
@@ -37,7 +35,7 @@ check_symlinks_LDADD = $(BOOST_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB)
 
 # check_moviesaver_SOURCES = check_moviesaver.cpp ../src/clip.cpp  ../src/image.cpp ../src/timing.cpp ../src/moviesaver.cpp ../src/saverworker.cpp ../src/subprocess.cpp 
 # #../src/clip.h  ../src/image.h ../src/timing.h ../src/moviesaver.h ../src/saverworker.h ../src/subprocess.h
-# check_moviesaver_CXXFLAGS = $(BOOST_CPPFLAGS)  $(GTK_CFLAGS) -I../src/ 
+# check_moviesaver_CXXFLAGS = $(BOOST_CPPFLAGS)  $(GTK_CFLAGS) -I$(top_srcdir)/src/ 
 # #-I../../src
 # check_moviesaver_LDADD = $(BOOST_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB) $(GTK_LIBS)
 
@@ -55,7 +53,13 @@ check_signals_LDADD = $(BOOST_LIBS)
 
 # check_midi_SOURCES = check_midi.cpp ../src/midi.cpp 
 # #../src/midi.h
-# check_midi_CXXFLAGS = $(STK_CXXFLAGS) $(CXXFLAGS) $(BOOST_CPPFLAGS) -I../src/ 
+# check_midi_CXXFLAGS = $(STK_CXXFLAGS) $(CXXFLAGS) $(BOOST_CPPFLAGS) -I$(top_srcdir)/src/ 
 # #-I../../src
 # check_midi_LDADD = $(LDFLAGS) $(STK_LIBS) $(BOOST_LIBS) 
 
+check_imageimporter_SOURCES = check_imageimporter.cpp $(top_srcdir)/src/image_importer.cpp
+check_imageimporter_CXXFLAGS = $(BOOST_CPPFLAGS) $(CLUTTERGTK_CFLAGS) -Wno-fatal-error -Wno-deprecated -I$(top_srcdir)/src
+check_imageimporter_LDADD = $(BOOST_LIBS) $(CLUTTERGTK_LIBS) $(BOOST_THREAD_LIB) $(BOOST_FILESYSTEM_LIB) $(BOOST_SYSTEM_LIB)
+
+check_properties_SOURCES = $(top_srcdir)/src/properties.h $(top_srcdir)/src/property.h check_properties.cpp
+check_properties_CXXFLAGS = -I$(top_srcdir)/src
