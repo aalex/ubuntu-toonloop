@@ -99,6 +99,10 @@ void Controller::choose_clip(unsigned int clip_number)
     else 
     {
         owner_->set_current_clip_number(clip_number);
+        if (owner_->get_configuration()->get_home_when_choose())
+        {
+            owner_->get_current_clip()->goto_beginning();
+        }
         //LOG_DEBUG("choose_clip #" << clip_number);
         choose_clip_signal_(clip_number);
     }
@@ -136,9 +140,10 @@ void Controller::save_current_clip()
         std::cout << "Clip is empty: #" << current_clip_number << std::endl;
         // return false;
     } else {
-        owner_->get_movie_saver()->add_saving_task(*clip);
+        std::string file_name = "";
+        owner_->get_movie_saver()->add_saving_task(*clip, file_name);
         //TODO: save_clip_signal_ should only be called when done saving.
-        save_clip_signal_(current_clip_number, "TODO: add file name");
+        save_clip_signal_(current_clip_number, file_name);
     }
 }
 

@@ -11,6 +11,7 @@ clean-local:
 headers = \
 	application.h \
 	clip.h \
+    clutter-tools.h \
 	command.h \
 	concurrentqueue.h \
 	config.h \
@@ -19,6 +20,7 @@ headers = \
 	gui.h \
 	image.h \
 	image_importer.h \
+	legacyclutter.h \
 	log.h \
 	midibinder.h \
 	midiinput.h \
@@ -46,6 +48,7 @@ headers = \
 toonloop_SOURCES = \
 	application.cpp \
 	clip.cpp \
+    clutter-tools.cpp \
 	command.cpp \
 	configuration.cpp \
 	controller.cpp \
@@ -77,7 +80,6 @@ toonloop_CXXFLAGS = \
 	$(CXXFLAGS) \
 	$(BOOST_CPPFLAGS) \
 	$(CLUTTERGST_CFLAGS) \
-	$(CLUTTERGTK_CFLAGS) \
 	$(LIBLO_CFLAGS) \
 	$(LIBM_CXXFLAGS) \
 	$(LIBTHREAD_CXXFLAGS) \
@@ -94,7 +96,6 @@ toonloop_LDADD = \
 	$(BOOST_SYSTEM_LIB) \
 	$(BOOST_THREAD_LIB) \
 	$(CLUTTERGST_LIBS) \
-	$(CLUTTERGTK_LIBS) \
 	$(LIBLO_LIBS) \
 	$(LIBM_LIBS) \
 	$(LIBTHREAD_LIBS) \
