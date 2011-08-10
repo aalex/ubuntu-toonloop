@@ -24,16 +24,13 @@
 #include <boost/bind.hpp>
 #include <boost/filesystem.hpp>
 #include <clutter-gst/clutter-gst.h>
-#include <clutter-gtk/clutter-gtk.h>
 #include <clutter/clutter.h>
 #include <cmath>
-#include <gdk/gdk.h>
-#include <gdk/gdkkeysyms.h>
-#include <gdk/gdkx.h>
 #include <gst/gst.h>
-#include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <iostream>
 #include <sstream>
+#include <string.h> // memcpy
 
 #include "application.h"
 #include "clip.h"
@@ -46,6 +43,8 @@
 #include "brcosaeffect.h"
 #include "timer.h"
 #include "unused.h"
+#include "legacyclutter.h"
+#include "clutter-tools.h"
 
 namespace fs = boost::filesystem;
 using std::tr1::shared_ptr;
@@ -56,11 +55,26 @@ static int clip_int(int value, int from, int to)
     return std::max(std::min(value, to), from);
 }
 
-gboolean Gui::on_mouse_button_event(GtkWidget* /* widget */, GdkEventButton *event, gpointer user_data)
+void Gui::set_window_icon(const std::string &path)
+{
+    // see https://github.com/clutter-project/mx/blob/master/mx/x11/mx-window-x11.c#L274
+    GError *error = NULL;
+    gboolean ok = toon_clutter_stage_set_window_icon(CLUTTER_STAGE(stage_), path.c_str(), &error);
+    if (ok)
+    {
+        std::cout << "success" << std::endl;
+    }
+    else
+    {
+        // TODO: print error
+    }
+}
+
+gboolean Gui::on_mouse_button_event(ClutterActor* /* actor */, ClutterEvent *event, gpointer user_data)
 {
     Gui *context = static_cast<Gui *>(user_data);
     // Before 2010-09-20 we tried to start/stop video recording but it was buggy
-    if (event->type == GDK_BUTTON_PRESS)
+    if (event->type == CLUTTER_BUTTON_PRESS)
     {
         if (context->owner_->get_configuration()->get_mouse_controls_enabled())
             context->owner_->get_controller()->add_frame();
@@ -104,31 +118,30 @@ void Gui::set_onionskin_opacity(int value)
         clutter_actor_set_opacity(CLUTTER_ACTOR(onionskin_textures_.at(0)), 0);
 }
 /**
- * In fullscreen mode, hides the cursor. In windowed mode, shows the cursor.
+ * In fullscreen mode, hides the cursor.
  */
-gboolean Gui::on_window_state_event(GtkWidget* /*widget*/, GdkEvent * event, gpointer user_data)
+void Gui::on_fullscreen(ClutterStage* /*stage*/, gpointer user_data)
 {
     Gui *context = static_cast<Gui*>(user_data);
-    GdkEventWindowState *tmp = (GdkEventWindowState *) event;
-    context->isFullscreen_ = (tmp->new_window_state & GDK_WINDOW_STATE_FULLSCREEN);
-    if (context->isFullscreen_)
-        context->hideCursor();
-    else
-        context->showCursor();
-    return TRUE;
+    context->isFullscreen_ = true;
+    context->hideCursor();
+}
+/**
+ * In windowed mode, shows the cursor.
+ */
+void Gui::on_unfullscreen(ClutterStage* /*stage*/, gpointer user_data)
+{
+    Gui *context = static_cast<Gui*>(user_data);
+    context->isFullscreen_ = false;
+    context->showCursor();
 }
 
-bool is_amd64()
-{
-    return sizeof(void*) == 8;
-}
 /**
  * In fullscreen mode, hides the cursor.
  */
 void Gui::hideCursor()
 {
-    if (! is_amd64())
-    	gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), (GdkCursor *) GDK_BLANK_CURSOR);
+    clutter_stage_hide_cursor(CLUTTER_STAGE(stage_));
 }
 
 /**
@@ -136,8 +149,7 @@ void Gui::hideCursor()
  */
 void Gui::showCursor()
 {
-    /// sets to default
-    gdk_window_set_cursor(GDK_WINDOW(clutter_widget_->window), (GdkCursor *) NULL);
+    clutter_stage_show_cursor(CLUTTER_STAGE(stage_));
 }
 
 /**
@@ -169,87 +181,94 @@ void Gui::showCursor()
  * - o: toggles onion skinning
  * - []: increase/decrease opacity of the live input image in the overlay layout.
  */
-gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer user_data)
+gboolean Gui::key_press_event(ClutterActor *stage, ClutterEvent *event, gpointer user_data)
 {
-    // TODO: Ctrl-s: save the whole project
     // TODO:2010-09-18:aalex:Use the accelerators to allow the user to configure the controls
     // TODO:2010-09-18:aalex:Use Clutter for mouse and keyboard controls (ClutterBindingPool)
+
+    UNUSED(stage);
+    guint keyval = clutter_event_get_key_symbol(event);
+    ClutterModifierType state = clutter_event_get_state(event);
+    //bool shift_pressed = (state & CLUTTER_SHIFT_MASK ? true : false);
+    bool ctrl_pressed = (state & CLUTTER_CONTROL_MASK ? true : false);
+    bool caps_lock_on = (state & CLUTTER_LOCK_MASK ? false : true); // FIXME: caps lock seems on when its off and vice versa
+
     Gui *context = static_cast<Gui*>(user_data);
     Controller *controller = context->owner_->get_controller();
     bool verbose = context->owner_->get_configuration()->get_verbose();
 
-    switch (event->keyval)
+    switch (keyval)
     {
-        case GDK_Caps_Lock:
+        case CLUTTER_KEY_Caps_Lock:
         {
-            if ((event->state & GDK_LOCK_MASK) != 0)
+            if (caps_lock_on)
             {
-                std::cout << "Caps_Lock off." << std::endl;
-                controller->enable_video_grabbing(false);
-            } else {
                 std::cout << "Caps_Lock on. Recording video." << std::endl;
                 controller->enable_video_grabbing(true);
+            } else {
+                std::cout << "Caps_Lock off." << std::endl;
+                controller->enable_video_grabbing(false);
             }
             break;
         }
-        case GDK_Up:
+        case CLUTTER_KEY_Up:
             controller->increase_playhead_fps();
             break;
-        case GDK_Down:
+        case CLUTTER_KEY_Down:
             controller->decrease_playhead_fps();
             break;
-        //case GDK_XXX:
+        //case CLUTTER_KEY_XXX:
         //    controller->set_current_clip_direction(DIRECTION_BACKWARD);
         //    break;
-        //case GDK_XXX:
+        //case CLUTTER_KEY_XXX:
         //    controller->set_current_clip_direction(DIRECTION_FORWARD);
         //    break;
-        case GDK_Tab:
+        case CLUTTER_KEY_Tab:
             controller->change_current_clip_direction();
             break;
-        case GDK_period:
+        case CLUTTER_KEY_period:
             //TODO:2010-08-27:aalex:Create Controller:toggle_layout
             context->toggle_layout();
             break;
-        case GDK_r:
+        case CLUTTER_KEY_r:
             // Ctrl-r or just r?
-            //if (event->state & GDK_CONTROL_MASK)
+            //if (event->state & CLUTTER_CONTROL_MASK)
             controller->clear_current_clip();
             break;
-        case GDK_BackSpace:
+        case CLUTTER_KEY_BackSpace:
             controller->remove_frame();
             break;
-        case GDK_f:
-        case GDK_Escape:
-            context->toggleFullscreen(widget);
+        case CLUTTER_KEY_f:
+        case CLUTTER_KEY_Escape:
+            context->toggleFullscreen();
             break;
-        case GDK_space:
+        case CLUTTER_KEY_space:
             controller->add_frame();
             break;
-        case GDK_Page_Up:
+        case CLUTTER_KEY_Page_Up:
             controller->choose_previous_clip();
             break;
-        case GDK_Page_Down:
+        case CLUTTER_KEY_Page_Down:
             controller->choose_next_clip();
             break;
-        case GDK_0:
-        case GDK_1:
-        case GDK_2:
-        case GDK_3:
-        case GDK_4:
-        case GDK_5:
-        case GDK_6:
-        case GDK_7:
-        case GDK_8:
-        case GDK_9:
+        case CLUTTER_KEY_0:
+        case CLUTTER_KEY_1:
+        case CLUTTER_KEY_2:
+        case CLUTTER_KEY_3:
+        case CLUTTER_KEY_4:
+        case CLUTTER_KEY_5:
+        case CLUTTER_KEY_6:
+        case CLUTTER_KEY_7:
+        case CLUTTER_KEY_8:
+        case CLUTTER_KEY_9:
         {   // need to use brackets when declaring variable inside case
             //* Switch the current clip according to a gdk key value from 0 to 9
             //* keyval should be one of :
             //* GDK_0 GDK_1 GDK_2 GDK_3 GDK_4 GDK_5 GDK_6 GDK_7 GDK_8 GDK_9
             //* Of course, any other value might lead to a crash.
             // FIXME:2010-08-17:aalex:Doing arithmetics with a gdk keyval is a hack
-            unsigned int number_pressed = (event->keyval & 0x0F);
-            if (event->state & GDK_CONTROL_MASK)
+            unsigned int number_pressed = (keyval & 0x0F);
+            if (ctrl_pressed)
             {
                 if (number_pressed == 0)
                     context->set_layout(LAYOUT_SPLITSCREEN);
@@ -268,19 +287,19 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
                 controller->choose_clip(number_pressed);
             break;
         }
-        case GDK_q:
+        case CLUTTER_KEY_q:
             // Quit application on ctrl-q, this quits the main loop
             // (if there is one)
-            if (event->state & GDK_CONTROL_MASK)
+            if (ctrl_pressed)
             {
                 if (verbose)
                     g_print("Ctrl-Q key pressed, quitting.\n");
                 context->owner_->quit();
             }
             break;
-        case GDK_s:
+        case CLUTTER_KEY_s:
             // Ctrl-s: Save the whole project
-            if (event->state & GDK_CONTROL_MASK)
+            if (ctrl_pressed)
             {
                 //if (verbose)
                 controller->save_project();
@@ -288,67 +307,67 @@ gboolean Gui::key_press_event(GtkWidget *widget, GdkEventKey *event, gpointer us
             } else // no Ctrl pressed
                 g_print("Warning: Use Ctrl-E to export the current clip as a movie file, or Ctrl-s to save the whole project.\n");
             break;
-        case GDK_e:
+        case CLUTTER_KEY_e:
             // Ctrl-e: Exports the current clip
             // (if there is one)
-            if (event->state & GDK_CONTROL_MASK)
+            if (ctrl_pressed)
             {
                 if (verbose)
                     g_print("Exporting the current clip.");
                 controller->save_current_clip();
             }
             break;
-        case GDK_F2: // TODO: change this key for save
+        case CLUTTER_KEY_F2: // TODO: change this key for save
             controller->save_project();
             controller->save_current_clip();
             break;
-        case GDK_a:
+        case CLUTTER_KEY_a:
             //std::cout << "Toggle intervalometer." << std::endl; 
             controller->toggle_intervalometer();
             break;
-        case GDK_k:
+        case CLUTTER_KEY_k:
             controller->increase_intervalometer_rate();
             break;
-        case GDK_j:
+        case CLUTTER_KEY_j:
             controller->decrease_intervalometer_rate();
             break;
-        case GDK_Left:
+        case CLUTTER_KEY_Left:
             controller->move_writehead_to_previous();
             break;
-        case GDK_Right:
+        case CLUTTER_KEY_Right:
             controller->move_writehead_to_next();
             break;
-        case GDK_Return:
+        case CLUTTER_KEY_Return:
             controller->move_writehead_to_last();
             break;
-        case GDK_semicolon:
+        case CLUTTER_KEY_semicolon:
             controller->move_writehead_to_first();
             break;
-        case GDK_bracketleft:
+        case CLUTTER_KEY_bracketleft:
             controller->set_int_value("livefeed_opacity", clip_int(controller->get_int_value("livefeed_opacity") - 1, 0, 255));
             break;
-        case GDK_bracketright:
+        case CLUTTER_KEY_bracketright:
             controller->set_int_value("livefeed_opacity", clip_int(controller->get_int_value("livefeed_opacity") + 1, 0, 255));
             break;
-        case GDK_parenleft:
+        case CLUTTER_KEY_parenleft:
             context->crossfade_increment(-0.1f);
             break;
-        case GDK_parenright:
+        case CLUTTER_KEY_parenright:
             context->crossfade_increment(0.1f);
             break;
-        case GDK_i:
+        case CLUTTER_KEY_i:
             context->toggle_info();
             break;
-        case GDK_F1:
+        case CLUTTER_KEY_F1:
             context->toggle_help();
             break;
-        case GDK_o:
+        case CLUTTER_KEY_o:
             context->enable_onionskin( ! context->onionskin_enabled_);
             break;
-        case GDK_x:
+        case CLUTTER_KEY_x:
             controller->set_int_value("black_out", 1 - controller->get_int_value("black_out")); // toggle [0,1]
             break;
-        case GDK_b:
+        case CLUTTER_KEY_b:
             {
                 Property<int> *blending_mode = controller->int_properties_.get_property("blending_mode");
                 if (blending_mode->get_value() == 1) //context->blending_mode_ == BLENDING_MODE_ADDITIVE)
@@ -425,7 +444,7 @@ void Gui::toggle_help()
 /**
  * Called when the window is deleted. Quits the application.
  */
-void Gui::on_delete_event(GtkWidget* /*widget*/, GdkEvent* /*event*/, gpointer user_data)
+void Gui::on_delete_event(ClutterStage* /*stage*/, ClutterEvent* /*event*/, gpointer user_data)
 {
     Gui *context = static_cast<Gui*>(user_data);
     if (context->owner_->get_configuration()->get_verbose())
@@ -436,28 +455,26 @@ void Gui::on_delete_event(GtkWidget* /*widget*/, GdkEvent* /*event*/, gpointer u
 /**
  * Toggles fullscreen mode on/off.
  */
-void Gui::toggleFullscreen(GtkWidget *widget)
+void Gui::toggleFullscreen()
 {
     // toggle fullscreen state
-    isFullscreen_ ? makeUnfullscreen(widget) : makeFullscreen(widget);
+    isFullscreen_ ? makeUnfullscreen() : makeFullscreen();
 }
 
 /** 
  * Makes the window fullscreen.
  */
-void Gui::makeFullscreen(GtkWidget *widget)
+void Gui::makeFullscreen()
 {
-    gtk_window_stick(GTK_WINDOW(widget)); // window is visible on all workspaces
-    gtk_window_fullscreen(GTK_WINDOW(widget));
+    clutter_stage_set_fullscreen(CLUTTER_STAGE(stage_), TRUE);
 }
 
 /**
  * Makes the window not fullscreen.
  */
-void Gui::makeUnfullscreen(GtkWidget *widget)
+void Gui::makeUnfullscreen()
 {
-    gtk_window_unstick(GTK_WINDOW(widget)); // window is not visible on all workspaces
-    gtk_window_unfullscreen(GTK_WINDOW(widget));
+    clutter_stage_set_fullscreen(CLUTTER_STAGE(stage_), FALSE);
 }
 
 /**
@@ -496,7 +513,8 @@ void Gui::on_next_image_to_play(unsigned int clip_number, unsigned int/*image_nu
         //if (owner_->get_configuration()->get_verbose())
         //    std::cout << "animate texture for " << duration << " ms" << std::endl;
         // TODO:2010-11-10:aalex:If there is only one image in the clip, do not fade out.
-        clutter_actor_animate(CLUTTER_ACTOR(playback_textures_.at(1)), CLUTTER_EASE_IN_OUT_CUBIC, duration, "opacity", 0, NULL);  
+        clutter_actor_animate(CLUTTER_ACTOR(playback_textures_.at(1)), CLUTTER_EASE_IN_OUT_CUBIC, duration,
+            "opacity", 0, NULL); 
     }
     else
         clutter_actor_set_opacity(CLUTTER_ACTOR(playback_textures_.at(1)), 0);
@@ -546,6 +564,7 @@ void Gui::on_frame_added(unsigned int clip_number, unsigned int image_number)
             //std::cout << "Loaded image " <<  image_full_path << std::endl;
         }
     }
+    animate_flash();
 }
 
 /** 
@@ -774,7 +793,6 @@ void Gui::on_live_input_texture_size_changed(ClutterTexture *texture, gint width
     gui->video_input_height_ = (float) height;
 
     ClutterActor *stage;
-
     stage = clutter_actor_get_stage(CLUTTER_ACTOR(texture));
     if (stage == NULL)
         return;
@@ -869,47 +887,37 @@ Gui::Gui(Application* owner) :
     Controller *controller = owner_->get_controller();
     controller->next_image_to_play_signal_.connect(boost::bind(&Gui::on_next_image_to_play, this, _1, _2, _3));
     controller->add_frame_signal_.connect(boost::bind(&Gui::on_frame_added, this, _1, _2));
+
+    controller->save_clip_signal_.connect(boost::bind(&Gui::on_save_clip, this, _1, _2));
+    controller->save_project_signal_.connect(boost::bind(&Gui::on_save_project, this, _1));
     //TODO: controller->no_image_to_play_signals_.connect(boost::bind(&Gui::on_no_image_to_play, this))
-    // Main GTK window
-    window_ = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    // TODO:2010-08-06:aalex:make window size configurable
-    gtk_widget_set_size_request(window_, WINWIDTH, WINHEIGHT); 
-    gtk_window_move(GTK_WINDOW(window_), 300, 10); // TODO: make configurable
+    stage_ = clutter_stage_get_default();
+    clutter_stage_set_minimum_size(CLUTTER_STAGE(stage_), 640, 480);
+
+    // TODO: set size
+    // TODO: set position
+
     std::string window_title("Toonloop " PACKAGE_VERSION);
-    // TODO: version is "snapshot" if minor number is odd, "git" if micro is odd, "release" otherwise
-    gtk_window_set_title(GTK_WINDOW(window_), window_title.c_str());
-    // Set window icon
-    fs::path iconPath(std::string(PIXMAPS_DIR) + "/toonloop.png");
+    clutter_stage_set_title(CLUTTER_STAGE(stage_), window_title.c_str());
+    // TODO: set window icon
+    fs::path iconPath(std::string(PIXMAPS_DIR) + "/toonloop_window_icon.png");
     if (fs::exists(iconPath))
-        gtk_window_set_icon_from_file(GTK_WINDOW(window_), iconPath.string().c_str(), NULL);
+    {
+        std::cout << "Image " << iconPath.string() << " exists." << std::endl;
+        set_window_icon(iconPath.string());
+    }
+    else
+        std::cout << "Image " << iconPath.string() << " does not exist." << std::endl;
 
-    GdkGeometry geometry;
-    geometry.min_width = 1;
-    geometry.min_height = 1;
-    geometry.max_width = -1;
-    geometry.max_height = -1;
-    gtk_window_set_geometry_hints(GTK_WINDOW(window_), window_, &geometry, GDK_HINT_MIN_SIZE);
     // connect window signals:
-    g_signal_connect(G_OBJECT(window_), "delete-event", G_CALLBACK(on_delete_event), this);
-    g_signal_connect(G_OBJECT(window_), "key-press-event", G_CALLBACK(key_press_event), this);
-    g_signal_connect(G_OBJECT(window_), "button-press-event", G_CALLBACK(on_mouse_button_event), this);
+    g_signal_connect(G_OBJECT(stage_), "delete-event", G_CALLBACK(on_delete_event), this);
 
-    // add listener for window-state-event to detect fullscreenness
-    g_signal_connect(G_OBJECT(window_), "window-state-event", G_CALLBACK(on_window_state_event), this);
-
-    // vbox:
-    vbox_ = gtk_vbox_new(FALSE, 0); // args: homogeneous, spacing
-    gtk_container_add(GTK_CONTAINER(window_), vbox_);
-
-    //some buttons:
-    //TODO:2010:08-17:aalex:Add a HBox with some buttons, plus a menu
-
-    // Clutter widget:
-    clutter_widget_ = gtk_clutter_embed_new();
-    gtk_widget_set_size_request(clutter_widget_, WINWIDTH, WINHEIGHT);
-    GTK_WIDGET_UNSET_FLAGS (clutter_widget_, GTK_DOUBLE_BUFFERED);
-    gtk_container_add(GTK_CONTAINER(vbox_), clutter_widget_);
-    stage_ = gtk_clutter_embed_get_stage(GTK_CLUTTER_EMBED(clutter_widget_));
+    // add listener to detect fullscreenness
+    g_signal_connect(G_OBJECT(stage_), "fullscreen", G_CALLBACK(on_fullscreen), this);
+    g_signal_connect(G_OBJECT(stage_), "unfullscreen", G_CALLBACK(on_unfullscreen), this);
+    // buttons, keys:
+    g_signal_connect(G_OBJECT(stage_), "key-press-event", G_CALLBACK(key_press_event), this);
+    g_signal_connect(G_OBJECT(stage_), "button-press-event", G_CALLBACK(on_mouse_button_event), this);
 
     clutter_stage_set_user_resizable(CLUTTER_STAGE(stage_), TRUE);
     g_signal_connect(stage_, "allocation-changed", G_CALLBACK(on_stage_allocation_changed), this);
@@ -986,14 +994,38 @@ Gui::Gui(Application* owner) :
     help_text_actor_ = clutter_text_new_full("Sans semibold 12px", HELP_TEXT.c_str(), &white);
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(help_text_actor_));
 
+    // status and progress bar
+    status_group_ = clutter_group_new();
+    clutter_container_add_actor(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(status_group_));
+    // status text:
+    status_text_actor_ = clutter_text_new_full("Sans semibold 12px", "", &white);
+    clutter_actor_set_position(status_text_actor_, 0.0, 0.0);
+    clutter_container_add_actor(CLUTTER_CONTAINER(status_group_), CLUTTER_ACTOR(status_text_actor_));
+    // progress bar:
+    progress_bar_actor_ = clutter_rectangle_new_with_color(&white);
+    clutter_actor_set_height(progress_bar_actor_, 2.0);
+    clutter_actor_set_opacity(progress_bar_actor_, 0.0);
+    clutter_actor_set_position(progress_bar_actor_, 0.0, 16.0);
+    clutter_container_add_actor(CLUTTER_CONTAINER(status_group_), progress_bar_actor_);
+    reset_progress_bar();
+
     // black out
     black_out_rectangle_ = clutter_rectangle_new_with_color(&black);
     clutter_actor_hide(black_out_rectangle_);
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), black_out_rectangle_);
 
+
+    // flash
+    flash_actor_ = clutter_rectangle_new_with_color(&white);
+    clutter_actor_set_opacity(flash_actor_, 0.0);
+    clutter_actor_set_size(flash_actor_, 4000.0, 4000.0); // very large
+    clutter_container_add_actor(CLUTTER_CONTAINER(stage_), flash_actor_);
+
     // Sort actors and groups:
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(playback_group_), NULL);
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(live_input_texture_), NULL);
+
+    clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(flash_actor_), NULL);
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(onionskin_group_), NULL);
     clutter_container_raise_child(CLUTTER_CONTAINER(stage_), CLUTTER_ACTOR(black_out_rectangle_), NULL);
     // The image on top, if set:
@@ -1019,7 +1051,7 @@ Gui::Gui(Application* owner) :
      * unrealized when the clutter foreign window is set. widget_show
      * will call show on the stage.
      */
-    gtk_widget_show_all(window_);
+    clutter_actor_show(stage_);
 
     // Set visibility for other things
     enable_onionskin(false);
@@ -1030,7 +1062,7 @@ Gui::Gui(Application* owner) :
     clutter_actor_hide_all(CLUTTER_ACTOR(playback_group_));
     // Makes fullscreen if needed
     if (owner_->get_configuration()->get_fullscreen())
-        toggleFullscreen(window_);
+        toggleFullscreen();
     // add properties:
     controller->add_int_property("blending_mode", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_blending_mode_int_property_changed, this, _1, _2));
     controller->add_float_property("crossfade_ratio", 0.0)->value_changed_signal_.connect(boost::bind(&Gui::on_crossfade_ratio_changed, this, _1, _2));
@@ -1052,6 +1084,7 @@ Gui::Gui(Application* owner) :
         saturation_effect_->add_actor(onionskin_group_);
         saturation_effect_->update_all_actors();
     }
+
 }
 
 void Gui::on_black_out_opacity_changed(std::string &name, int value)
@@ -1208,3 +1241,55 @@ std::string Gui::get_blending_mode_name(BlendingMode mode)
             break;
     }
 }
+
+void Gui::on_save_clip(unsigned int clip_number, std::string &file_name)
+{
+    std::ostringstream os;
+    os << "Saving clip " << clip_number << " as " << file_name;
+    std::cout << os.str() << std::endl;
+    clutter_text_set_text(CLUTTER_TEXT(status_text_actor_), os.str().c_str());
+    animate_progress_bar();
+}
+
+void Gui::on_save_project(std::string &file_name)
+{
+    std::ostringstream os;
+    os << "Saving project as " << file_name;
+    std::cout << os.str() << std::endl;
+    clutter_text_set_text(CLUTTER_TEXT(status_text_actor_), os.str().c_str());
+    animate_progress_bar();
+}
+
+void Gui::reset_progress_bar()
+{
+    clutter_actor_set_opacity(status_text_actor_, 255.0);
+
+    clutter_actor_set_opacity(progress_bar_actor_, 255.0);
+    clutter_actor_set_width(progress_bar_actor_, 0.0);
+}
+
+void Gui::animate_progress_bar()
+{
+    reset_progress_bar();
+    gint duration = g_random_int_range(1000, 2000);
+    // animate bar:
+    clutter_actor_animate(status_text_actor_, CLUTTER_EASE_IN_SINE, duration,
+        "opacity", 0,
+        NULL);
+
+    // animate text:
+    clutter_actor_animate(progress_bar_actor_, CLUTTER_EASE_IN_OUT_SINE, duration,
+        "width", clutter_actor_get_width(stage_),
+        "opacity", 0,
+        NULL);
+}
+
+void Gui::animate_flash()
+{
+    gint duration = 200;
+    clutter_actor_set_opacity(flash_actor_, 60.0);
+    clutter_actor_animate(flash_actor_, CLUTTER_EASE_OUT_SINE, duration,
+        "opacity", 0,
+        NULL);
+}
+

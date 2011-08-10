@@ -17,27 +17,12 @@
  * You should have received a copy of the gnu general public license
  * along with Toonloop.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __CLUTTER_TOOLS_H__
+#define __CLUTTER_TOOLS_H__
 
-#ifndef __SAVERWORKER_H__
-#define __SAVERWORKER_H__
+#include <clutter/clutter.h>
 
-// forward declarations
-class MovieSaver;
+gboolean toon_clutter_stage_set_window_icon(ClutterStage *stage, const gchar *path, GError **error);
 
-/** Takes care of saving a movie in a thread.
- */
-class SaverWorker
-{
-    public:
-        SaverWorker(MovieSaver *owner);
-        void set_final_options(const std::string &datetime_started, const std::string &final_file_name);
-        void operator()();
-        bool success_;
-    private:
-        MovieSaver *owner_;
-        std::string datetime_started_;
-        std::string final_file_name_;
-};
-
-#endif
+#endif // __CLUTTER_TOOLS_H__
 

@@ -1,5 +1,27 @@
-See the RELEASE file for the latest new features and bug fixes.
-See the ChangeLog file for a log of previous releases informations.
+See the ChangeLog file for the details of each commit.
+
+
+2011-08-05 Toonloop 2.1.14
+--------------------------
+
+This release is a snapshot in the 2.1 unstable series. 
+
+This version contains new features and bug fixes.
+
+New features:
+    * Display text and an animation when saving clip or project
+    * Go to beginning of clip when choose it (optional)
+    * Flash when grab an image
+    * Get rid of GTK
+    * Interface to serial button sends OSC via Twisted (separate Python script)
+    * Add doc/toonloop-title.svg
+
+Bug fixes:
+    * Do not die if cannot find MIDI XML config file
+    * Implement MIDI binding for SaveCurrentClip command (was crashing)
+
+New bugs:
+    * window icon looks bad
 
 
 2011-06-07 Toonloop 2.1.12
@@ -7,7 +29,7 @@ See the ChangeLog file for a log of previous releases informations.
 
 This release is a snapshot in the 2.1 unstable series. 
 
-This version contains new features and bug fixes. It introduce a change in the user interface that is not backward-compatible. 
+This version contains new features and bug fixes.
 
 New features:
     * /toon/clip/import_image s:file_name : Imports an image from the filesystem

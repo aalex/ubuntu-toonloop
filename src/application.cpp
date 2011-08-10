@@ -21,10 +21,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include <clutter-gst/clutter-gst.h>
-#include <clutter-gtk/clutter-gtk.h>
 #include <cstdlib> // for getenv
 #include <gst/gst.h>
-#include <gtk/gtk.h>
 #include <iostream>
 #include <libxml/parser.h>
 #include <libxml/tree.h>
@@ -182,6 +180,7 @@ void Application::run(int argc, char *argv[])
         ("print-properties", po::bool_switch(), "Prints a list of the Toonloop properties once running.")
         ("no-load-project", po::bool_switch(), "Disables project file loading.")
         ("auto-save-project", po::bool_switch(), "Enables project auto saving.")
+        ("continue-when-choose,C", po::bool_switch(), "When a clip is chosen, continue where it was instead of going to beginning.")
         ;
     po::variables_map options;
     po::store(po::parse_command_line(argc, argv, desc), options);
@@ -341,8 +340,8 @@ void Application::run(int argc, char *argv[])
 
     GError *error;
     error = NULL;
-    // FIXME: we should pass error to gtk_clutter_init
-    gtk_clutter_init(&argc, &argv);
+    // FIXME: we should pass error to clutter_init
+    clutter_init(&argc, &argv);
     if (error)
     {
         g_error("Unable to initialize Clutter: %s", error->message);
@@ -428,7 +427,7 @@ void Application::run(int argc, char *argv[])
     // Starts it all:
     if (verbose)
         std::cout << "Running toonloop" << std::endl;
-    gtk_main();
+    clutter_main();
     if (verbose)
         std::cout << "Leaving toonloop" << std::endl;
 
@@ -528,7 +527,7 @@ void Application::quit()
     if (config_->get_verbose())
         std::cout << "Quitting the application." << std::endl;
     pipeline_->stop();
-    gtk_main_quit();
+    clutter_main_quit();
 }
 
 /**
