@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(TOONLOOP, 2.1.14, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
+AC_INIT(TOONLOOP, 2.1.18, [support@toonloop.com], [toonloop], [http://www.toonloop.com])
 AC_CONFIG_HEADER([src/config.h])
 AC_CONFIG_MACRO_DIR([m4]) # check for m4 macros in directory m4
 AC_PROG_LIBTOOL
@@ -80,8 +80,8 @@ AC_SUBST([CLUTTER_CFLAGS])
 # libjson-glib-dev and others
 
 # Clutter-GST
-PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-0.10 >= 0.10], have_clutter_gst=true, 
-    PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-1.0 >= 1.0], have_clutter_gst=true, have_clutter_gst=false))
+PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-1.0 >= 1.0], have_clutter_gst=true, 
+    PKG_CHECK_MODULES([CLUTTERGST], [clutter-gst-0.10 >= 0.10], have_clutter_gst=true, have_clutter_gst=false))
 if test "x${have_clutter_gst}" = "xfalse" ; then
     AC_MSG_ERROR([missing package: libclutter-gst-dev])
 fi
@@ -157,8 +157,7 @@ AC_MSG_NOTICE(Storing pixmaps files in $PIXMAPS_DIR)
 AC_DEFINE_UNQUOTED([DATADIR], "${DATADIR}", "Data dir")
 AC_DEFINE_UNQUOTED([PIXMAPS_DIR], "${PIXMAPS_DIR}", "Pixmaps dir")
 
-AC_SUBST(CXXFLAGS, " -O2 -Wall -Werror -Wextra -Wfatal-errors") 
-
+AC_SUBST(CXXFLAGS, " -O2 -Wall -Wextra -Werror -Wno-unused-result -Wfatal-errors") 
 AC_CONFIG_FILES([
     Makefile
     src/Makefile

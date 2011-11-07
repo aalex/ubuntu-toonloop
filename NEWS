@@ -1,6 +1,42 @@
 See the ChangeLog file for the details of each commit.
 
 
+2011-11-07 Toonloop 2.1.18
+--------------------------
+
+This release is a snapshot in the 2.1 unstable series. 
+
+This version contains new bug fixes.
+
+Bug fixes:
+    * Use -Wno-unused-result for Ubuntu Oneiric
+    * Disable window icon for Oneiric
+    * Fix boost::file_system::path construction for Oneiric
+
+
+2011-10-05 Toonloop 2.1.16
+--------------------------
+
+This release is a snapshot in the 2.1 unstable series. 
+
+This version contains new features and bug fixes.
+
+New features:
+    * append clip id to the name of exported video files
+    * videotestsrc size is now configurable as well
+    * can now switch to a clip and add a frame to it in a single key stroke (shift-number)
+    * --list-properties option now prints all the properties and exits
+    * implement osc callbacks for playhead_goto and playback_enable
+    * can now pause with the p key
+    * add /toon/set_int and /toon/set_float osc callbacks
+
+Bug fixes:
+    * rename option --print-properties to --list-properties
+    * fix bug with info HUD saying it's Git while wrong
+    * show the playback group if in overlay layout
+    * prioritize clutter-gst 1.0, not 0.10
+
+
 2011-08-05 Toonloop 2.1.14
 --------------------------
 
