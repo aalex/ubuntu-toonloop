@@ -25,14 +25,11 @@ Can anyone else than me (Alexandre) please review and comment or modify those?
 Top Priorities
 --------------
 
- * TODO: make videotestsrc size configurable as well!
  * video: detect what frame rate should work with each web cam, at fallback to the closest that would work if the one provided on the command-line is not supported. For example: (Logitech HD Pro Webcam C910) Caps structure from v4l2src srcpad: video/x-raw-yuv, format=(fourcc)YUY2, width=(int)704, height=(int)576, framerate=(fraction){ 25/1, 45/2, 20/1, 35/2, 15/1, 25/2, 10/1, 15/2, 5/1, 5/2, 1/1 }; Video source caps are video/x-raw-yuv, width=704, height=576, framerate=25/1
  * editing: allow an infinity of clips. Paging could allow more than ten clips. Use <>
  * gui: Why does closing the info window makes the app unresponsive?
  * controller: review and simplify properties.h and controller.h
  * controller: If a property already exists, trying to create it should return a pointer to the other one. (to avoid race conditions upon property creation?) 
- * controller: Implement the --list-properties option. (maybe we'll need not to start the GUI before setting up the controller and effects)
- * editing: switch to a clip and add a frame to it in a single key stroke
  * playback: scratch video
  * playback: Be able to change looping bounds
  * controls: Add direct controls for playback direction.
@@ -47,7 +44,6 @@ Right now, here is the list of tasks to prioritize:
  * BUG: Auto-record video is very slow. We should save pixbufs asynchronously. (it's not provided by their library! see "optimization")
  * BUG: Auto-record video sometimes keeps recording and is impossible to stop!
  * BUG: Sometimes, in one-image clips, the playhead tries to change to 1. Clip::get_image: Got exception vector::_M_range_check \n Controller::update_playback_image: The image is NULL
- * BUG: check for runtime dep (mencoder) in the executable.
  * BUG: the first live input image is white (hence the first recorded one if using timelapse)
  * architecture: create the ToonLooper and ToonGrabber classes. (take those from gui and pipeline)
  * doc: Make sure the keystroke instructions are in only one place.
@@ -92,7 +88,6 @@ To be done later
  * optimization: Use boost::any for the message args. See http://www.boost.org/doc/libs/1_43_0/doc/html/any/s02.html
  * packaging: Improve STK packaging
  * packaging: Re-add previous tests, including headers from src.
- * packaging: Remove dependency to GTK. (GUI controls should use Clutter)
  * playback: Allow to move playhead to the beginning of a clip when we switch to it.
  * playback: Basic sequences of clips.
  * playback: allow to play all clips from 0 to 9

@@ -189,7 +189,7 @@ gboolean Gui::key_press_event(ClutterActor *stage, ClutterEvent *event, gpointer
     UNUSED(stage);
     guint keyval = clutter_event_get_key_symbol(event);
     ClutterModifierType state = clutter_event_get_state(event);
-    //bool shift_pressed = (state & CLUTTER_SHIFT_MASK ? true : false);
+    bool shift_pressed = (state & CLUTTER_SHIFT_MASK ? true : false);
     bool ctrl_pressed = (state & CLUTTER_CONTROL_MASK ? true : false);
     bool caps_lock_on = (state & CLUTTER_LOCK_MASK ? false : true); // FIXME: caps lock seems on when its off and vice versa
 
@@ -283,6 +283,8 @@ gboolean Gui::key_press_event(ClutterActor *stage, ClutterEvent *event, gpointer
                 else
                     std::cout << "No layout with number " << number_pressed << std::endl;
             }
+            else if (shift_pressed)
+                controller->choose_clip_and_add_frame(number_pressed);
             else
                 controller->choose_clip(number_pressed);
             break;
@@ -377,6 +379,12 @@ gboolean Gui::key_press_event(ClutterActor *stage, ClutterEvent *event, gpointer
                     blending_mode->set_value(1);
                     //context->set_blending_mode(BLENDING_MODE_ADDITIVE);
                 std::cout << "Blending mode:" << context->blending_mode_ << std::endl;
+            }
+            break;
+        case CLUTTER_KEY_p:
+            {
+                bool enabled = controller->get_playback_enabled();
+                controller->playback_toggle(! enabled);
             }
             break;
         default:
@@ -635,6 +643,7 @@ void on_stage_allocation_changed(ClutterActor * /*stage*/,
     Gui *gui = static_cast<Gui*>(user_data);
     gui->resize_actors();
 }
+
 /**
  * Called when it's time to resize the textures in the stage.
  *
@@ -655,7 +664,8 @@ void Gui::resize_actors()
     {    
         clutter_actor_show_all(CLUTTER_ACTOR(live_input_texture_));
         Property<int> *livefeed_opacity = controller->int_properties_.get_property("livefeed_opacity"); // TODO: use int_properties_.get_value() or it might crash if the property is not found!
-        clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), livefeed_opacity->get_value());
+        if (livefeed_opacity)
+            clutter_actor_set_opacity(CLUTTER_ACTOR(live_input_texture_), livefeed_opacity->get_value());
     } 
     else  // LAYOUT_SPLITSCREEN or LAYOUT_PORTRAIT or LAYOUT_LIVEFEED_ONLY
     {
@@ -667,6 +677,13 @@ void Gui::resize_actors()
         clutter_actor_hide(CLUTTER_ACTOR(playback_group_));
     else
         clutter_actor_show(CLUTTER_ACTOR(playback_group_));
+
+    if (current_layout_ == LAYOUT_OVERLAY)
+    {    
+        Property<int> *playback_opacity = controller->int_properties_.get_property("playback_opacity"); // TODO: use int_properties_.get_value() or it might crash if the property is not found!
+        if (playback_opacity)
+            clutter_actor_set_opacity(CLUTTER_ACTOR(playback_group_), playback_opacity->get_value());
+    } 
     // Figure out the size of the area on which we draw things
     gfloat area_x, area_y, area_width, area_height;
     gfloat stage_width, stage_height;
@@ -772,6 +789,7 @@ void Gui::resize_actors()
     }
     clutter_actor_set_size(black_out_rectangle_, stage_width, stage_height);
 }
+
 /**
  * Called when the size of the input image has changed.
  *
@@ -882,7 +900,8 @@ Gui::Gui(Application* owner) :
     fps_calculation_timer_(),
     number_of_frames_in_last_second_(0),
     rendering_fps_(0),
-    info_window_(owner)
+    info_window_(owner),
+    is_shown_(false)
 {
     Controller *controller = owner_->get_controller();
     controller->next_image_to_play_signal_.connect(boost::bind(&Gui::on_next_image_to_play, this, _1, _2, _3));
@@ -891,6 +910,41 @@ Gui::Gui(Application* owner) :
     controller->save_clip_signal_.connect(boost::bind(&Gui::on_save_clip, this, _1, _2));
     controller->save_project_signal_.connect(boost::bind(&Gui::on_save_project, this, _1));
     //TODO: controller->no_image_to_play_signals_.connect(boost::bind(&Gui::on_no_image_to_play, this))
+
+    // add properties:
+    controller->add_int_property("blending_mode", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_blending_mode_int_property_changed, this, _1, _2));
+    controller->add_float_property("crossfade_ratio", 0.0)->value_changed_signal_.connect(boost::bind(&Gui::on_crossfade_ratio_changed, this, _1, _2));
+    controller->add_int_property("livefeed_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_livefeed_opacity_changed, this, _1, _2));
+    controller->add_int_property("black_out", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_changed, this, _1, _2));
+    controller->add_int_property("black_out_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_opacity_changed, this, _1, _2));
+    controller->add_int_property("playback_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_playback_opacity_changed, this, _1, _2));
+
+    if (owner_->get_configuration()->get_shaders_enabled())
+    {
+        load_effects();
+    }
+}
+
+void Gui::load_effects()
+{
+    Controller *controller = owner_->get_controller();
+    saturation_effect_.reset(new BrCoSaEffect(controller));
+}
+
+void Gui::apply_effects()
+{
+    saturation_effect_->add_actor(playback_group_);
+    saturation_effect_->add_actor(live_input_texture_);
+    saturation_effect_->add_actor(onionskin_group_);
+    saturation_effect_->update_all_actors();
+}
+
+void Gui::show()
+{
+    if (is_shown_)
+        return;
+    is_shown_ = true;
+
     stage_ = clutter_stage_get_default();
     clutter_stage_set_minimum_size(CLUTTER_STAGE(stage_), 640, 480);
 
@@ -904,7 +958,8 @@ Gui::Gui(Application* owner) :
     if (fs::exists(iconPath))
     {
         std::cout << "Image " << iconPath.string() << " exists." << std::endl;
-        set_window_icon(iconPath.string());
+        std::cout << "Window icon is temporarily disabled." << std::endl;
+        //set_window_icon(iconPath.string());
     }
     else
         std::cout << "Image " << iconPath.string() << " does not exist." << std::endl;
@@ -1014,7 +1069,6 @@ Gui::Gui(Application* owner) :
     clutter_actor_hide(black_out_rectangle_);
     clutter_container_add_actor(CLUTTER_CONTAINER(stage_), black_out_rectangle_);
 
-
     // flash
     flash_actor_ = clutter_rectangle_new_with_color(&white);
     clutter_actor_set_opacity(flash_actor_, 0.0);
@@ -1063,14 +1117,6 @@ Gui::Gui(Application* owner) :
     // Makes fullscreen if needed
     if (owner_->get_configuration()->get_fullscreen())
         toggleFullscreen();
-    // add properties:
-    controller->add_int_property("blending_mode", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_blending_mode_int_property_changed, this, _1, _2));
-    controller->add_float_property("crossfade_ratio", 0.0)->value_changed_signal_.connect(boost::bind(&Gui::on_crossfade_ratio_changed, this, _1, _2));
-    controller->add_int_property("livefeed_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_livefeed_opacity_changed, this, _1, _2));
-    controller->add_int_property("black_out", 0)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_changed, this, _1, _2));
-    controller->add_int_property("black_out_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_black_out_opacity_changed, this, _1, _2));
-    controller->add_int_property("playback_opacity", 255)->value_changed_signal_.connect(boost::bind(&Gui::on_playback_opacity_changed, this, _1, _2));
-
     // saturation effect:
     clutter_actor_set_name(playback_group_, "playback_group_");
     clutter_actor_set_name(live_input_texture_, "live_input_texture_");
@@ -1078,13 +1124,8 @@ Gui::Gui(Application* owner) :
     
     if (owner_->get_configuration()->get_shaders_enabled())
     {
-        saturation_effect_.reset(new BrCoSaEffect(controller));
-        saturation_effect_->add_actor(playback_group_);
-        saturation_effect_->add_actor(live_input_texture_);
-        saturation_effect_->add_actor(onionskin_group_);
-        saturation_effect_->update_all_actors();
+        apply_effects();
     }
-
 }
 
 void Gui::on_black_out_opacity_changed(std::string &name, int value)
@@ -1134,7 +1175,7 @@ std::string Gui::get_layout_name(layout_number layout)
 void Gui::update_info_text()
 {
     static const bool isUnstable = PACKAGE_VERSION_MINOR % 2 == 1;
-    static const bool isGit = PACKAGE_VERSION_MICRO != 0;
+    static const bool isGit = PACKAGE_VERSION_MICRO % 2 == 1;
     std::ostringstream os;
     Clip* current_clip = owner_->get_current_clip();
     os << "Toonloop " << PACKAGE_VERSION << 
@@ -1203,6 +1244,9 @@ void Gui::set_blending_mode(BlendingMode mode)
         case BLENDING_MODE_ADDITIVE:
             blend = ADD_BLEND_MODE;
             break;
+        default:
+            blend = NORMAL_BLEND_MODE;
+            break;
     } 
     // set mode for all textures:
     set_blending_mode_for_texture(CLUTTER_TEXTURE(live_input_texture_), blend);
@@ -1263,7 +1307,6 @@ void Gui::on_save_project(std::string &file_name)
 void Gui::reset_progress_bar()
 {
     clutter_actor_set_opacity(status_text_actor_, 255.0);
-
     clutter_actor_set_opacity(progress_bar_actor_, 255.0);
     clutter_actor_set_width(progress_bar_actor_, 0.0);
 }
